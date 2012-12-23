@@ -1,0 +1,8 @@
+{
+	"name": "razorleaf",
+	"version": "0.0.0",
+	"main": "razorleaf.js",
+	"files": ["razorleaf.js"],
+	"description": "Razor Leaf is a template engine for HTML.",
+	"keywords": ["template", "bulbasaur"]
+}
