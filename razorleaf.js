@@ -95,7 +95,7 @@ function renderElement(element, options) {
 		} else if(child instanceof LiteralString) {
 			output += child.contents;
 		} else {
-			output += renderElement(child);
+			output += renderElement(child, options);
 		}
 	});
 
