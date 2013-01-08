@@ -45,11 +45,12 @@ The possible options are:
 
 ## Usage
 
+    var fs = require("fs");
     var razorleaf = require("razorleaf");
 
-    var index = new razorleaf.Template("views/index.leaf");
+    var index = new razorleaf.Template(fs.readFileSync("views/index.leaf", "utf-8"), "views/index.leaf");
 
-    index.render({"title": "Colours that end in “urple”"});
+    index.render({title: "Colours that end in “urple”"});
 
 ---
 
@@ -80,9 +81,10 @@ The possible options are:
 
 ## Reference
 
-#### `new Template(file)`
+#### `new Template(template, [filePath])`
 
-Loads the specified Razor Leaf template *synchronously*.
+Creates a new template from the specified string. `filePath` optionally
+specifies the file containing the template, for debugging purposes.
 
 #### `Template.prototype.render(data, [options])`
 

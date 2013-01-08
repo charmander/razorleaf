@@ -21,8 +21,8 @@ function escapeAttributeText(text) {
 	           .replace(/"/g, "&quot;");
 }
 
-function LiteralString(contents) {
-	this.contents = contents;
+function LiteralString(content) {
+	this.content = content;
 }
 
 function createModel(content) {
@@ -93,7 +93,7 @@ function renderElement(element, options) {
 		if(typeof child === "string") {
 			output += escapeText(child);
 		} else if(child instanceof LiteralString) {
-			output += child.contents;
+			output += child.content;
 		} else {
 			output += renderElement(child, options);
 		}
@@ -102,9 +102,9 @@ function renderElement(element, options) {
 	return output + "</" + element.name + ">";
 }
 
-function Template(filePath) {
+function Template(template, filePath) {
 	this.filePath = filePath;
-	this.script = vm.createScript(fs.readFileSync(filePath, "utf-8"), filePath);
+	this.script = vm.createScript(template, filePath);
 }
 
 Template.prototype.render = function(data, options) {
