@@ -5,8 +5,17 @@ var vm = require("vm");
 
 var push = Array.prototype.push;
 
-var voidTags = ["area", "base", "br", "col", "command", "embed", "hr", "img", "input", "keygen", "link", "meta", "param", "source", "track", "wbr"];
+function extend(destination, source) {
+	if(source !== undefined) {
+		Object.keys(source).forEach(function(key) {
+			destination[key] = source[key];
+		});
+	}
 
+	return destination;
+}
+
+var voidTags = ["area", "base", "br", "col", "command", "embed", "hr", "img", "input", "keygen", "link", "meta", "param", "source", "track", "wbr"];
 var htmlAttributeName = /^[^ \t\r\n\f"'>\/=\0\7\b\27\127]+$/;
 
 function escapeText(text) {
@@ -100,22 +109,25 @@ function renderElement(element, options) {
 	return output + "</" + element.name + ">";
 }
 
-function Template(template, filePath) {
+function Template(template, filePath, options) {
 	this.filePath = filePath;
 	this.script = vm.createScript(template, filePath);
+	this.options = extend({
+		dtd: "<!DOCTYPE html>",
+		xhtml: false,
+		gzip: false
+	}, options);
 }
 
-Template.prototype.render = function(data, options) {
-	options = options || {};
-	var dtd = options.doctype === undefined ? "<!DOCTYPE html>" : options.doctype;
-
-	var content = this.script.runInNewContext(data);
+Template.prototype.render = function(data) {
+	global.data = data;
+	var content = this.script.runInThisContext();
 
 	assert(Array.isArray(content) && typeof content[0] === "string" && content[0].slice(-1) !== "=");
 
 	var model = createModel(content);
 
-	return dtd + renderElement(model, options);
+	return this.options.dtd + renderElement(model, this.options);
 };
 
 module.exports.Template = Template;

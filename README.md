@@ -32,7 +32,7 @@ In the case of duplicate attribute names, the last value is used.
 
 ## Configuration
 
-Options can be passed to `Template.prototype.render` as a second argument.
+Options can be passed to the `Template` constructor as a second argument.
 The possible options are:
 
  - `doctype`: The DTD that should be used, defaulting to `<!DOCTYPE html>`.
@@ -42,6 +42,9 @@ The possible options are:
    defaulting to `false`. If `true`, void elements are expressed
    using the self-closing tag syntax (as in `<br />`), and boolean
    attributes use their name as a value when present (as in `checked="checked"`).
+
+ - `gzip`: Whether the response served by `Template.prototype.serve` should be
+   compressed, defaulting to `false`.
 
 ## Usage
 
@@ -57,7 +60,7 @@ The possible options are:
     ["html",
         ["head",
             ["meta", ["charset=", "utf-8"]],
-            ["title", title]
+            ["title", data.title]
         ],
         ["body",
             ["h1", "Hello, world!"]
@@ -81,21 +84,22 @@ The possible options are:
 
 ## Reference
 
-#### `new Template(template, [filePath])`
+#### `new Template(template, [filePath], [options])`
 
-Creates a new template from the specified string. `filePath` optionally
-specifies the file containing the template, for debugging purposes.
+Creates a new template from the specified string with the specified options
+(see **Configuration**). `filePath` optionally specifies the file containing
+the template, for debugging purposes.
 
-#### `Template.prototype.render(data, [options])`
+#### `Template.prototype.render(data)`
 
-Renders the template with the specified data and options (see **Configuration**)
-and returns the result as a string.
+Renders the template with the specified data and returns the result as a string.
 
-#### `Template.prototype.serve(request, response, data, [options])`
+#### `Template.prototype.serve(request, response, data)`
+
+*Note: this method does not yet exist*
 
 Renders the template with the specified data and options, and serves the result
-to the specified HTTP response. Supports Gzip compression, and introduces an
-additional option, `gzip`, defaulting to `true`.
+to the specified HTTP response.
 
 ## Known bugs
 
