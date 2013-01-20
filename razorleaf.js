@@ -1,7 +1,6 @@
 "use strict";
 
 var assert = require("assert");
-var fs = require("fs");
 var vm = require("vm");
 
 var push = Array.prototype.push;
@@ -25,9 +24,8 @@ function LiteralString(content) {
 	this.content = content;
 }
 
-function createModel(content) {
-	var element = {name: content[0], attributes: {}, children: []};
-	var queue = content.slice(1);
+function createModel(queue) {
+	var element = {name: queue.shift(), attributes: {}, children: []};
 
 	while(queue.length > 0) {
 		var item = queue.shift();
