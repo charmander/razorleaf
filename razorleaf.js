@@ -83,7 +83,7 @@ function renderElement(element, options) {
 			output += " " + attributeName;
 
 			if(attributeValue !== true) {
-				output += "=\"" + escapeAttributeText(attributeValue) + "\"";
+				output += "=\"" + escapeAttributeText(String(attributeValue)) + "\"";
 			} else if(options.xhtml) {
 				output += "=\"" + attributeName + "\"";
 			}
