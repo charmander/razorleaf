@@ -16,7 +16,6 @@ function extend(destination, source) {
 }
 
 var voidTags = ["area", "base", "br", "col", "command", "embed", "hr", "img", "input", "keygen", "link", "meta", "param", "source", "track", "wbr"];
-var htmlAttributeName = /^[^ \t\r\n\f"'>\/=\0\7\b\27\127]+$/;
 
 function escapeText(text) {
 	return text.replace(/&/g, "&amp;")
@@ -76,10 +75,6 @@ function renderElement(element, options) {
 		var attributeValue = element.attributes[attributeName];
 
 		if(attributeValue !== null && attributeValue !== undefined && attributeValue !== false) {
-			if(!htmlAttributeName.test(attributeName)) {
-				throw new Error("Invalid HTML attribute name “" + attributeName + "”.");
-			}
-
 			output += " " + attributeName;
 
 			if(attributeValue !== true) {
