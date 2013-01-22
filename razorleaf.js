@@ -17,15 +17,20 @@ function extend(destination, source) {
 
 var voidTags = ["area", "base", "br", "col", "command", "embed", "hr", "img", "input", "keygen", "link", "meta", "param", "source", "track", "wbr"];
 
+var amp = /&/g;
+var lt = /</g;
+var gt = />/g;
+var quot = /"/g;
+
 function escapeText(text) {
-	return text.replace(/&/g, "&amp;")
-	           .replace(/</g, "&lt;")
-	           .replace(/>/g, "&gt;");
+	return text.replace(amp, "&amp;")
+	           .replace(lt, "&lt;")
+	           .replace(gt, "&gt;");
 }
 
 function escapeAttributeText(text) {
-	return text.replace(/&/g, "&amp;")
-	           .replace(/"/g, "&quot;");
+	return text.replace(amp, "&amp;")
+	           .replace(quot, "&quot;");
 }
 
 function LiteralString(content) {

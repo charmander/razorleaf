@@ -1,6 +1,6 @@
 {
 	"name": "razorleaf",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"main": "razorleaf.js",
 	"files": ["razorleaf.js"],
 	"description": "A template engine for HTML.",
