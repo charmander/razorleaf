@@ -48,7 +48,7 @@ benchmarks.push({
 	}
 });
 
-if(process.argv.indexOf("--single") !== -1) {
+if(process.argv.indexOf("--single") === -1) {
 	if(jade) {
 		benchmarks.push({
 			name: "Jade",
