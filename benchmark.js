@@ -48,8 +48,8 @@ benchmarks.push({
 	}
 });
 
-if(process.argv.indexOf("--single") === -1) {
-	if(jade && process.argv.indexOf("--single") === -1) {
+if(process.argv.indexOf("--single") !== -1) {
+	if(jade) {
 		benchmarks.push({
 			name: "Jade",
 			extension: "jade",
@@ -65,7 +65,7 @@ if(process.argv.indexOf("--single") === -1) {
 		});
 	}
 
-	if(ECT && process.argv.indexOf("--single") === -1) {
+	if(ECT) {
 		benchmarks.push({
 			name: "ECT",
 			extension: "ect",
