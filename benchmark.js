@@ -15,6 +15,7 @@ var jsdom = require("jsdom");
 var razorleaf = require("./razorleaf");
 var jade = tryRequire("jade");
 var ECT = tryRequire("ect");
+var whiskers = tryRequire("whiskers");
 
 var push = Array.prototype.push;
 
@@ -82,6 +83,20 @@ if(process.argv.indexOf("--single") === -1) {
 			}
 		});
 	}
+
+	if(whiskers) {
+		benchmarks.push({
+			name: "whiskers",
+			extension: "whiskers",
+			run: function(time, content, data) {
+				time(function() {
+					whiskers.render(content, data);
+				});
+
+				return whiskers.render(content, data);
+			}
+		});
+	}
 }
 
 function domEqual(a, b) {
@@ -127,7 +142,7 @@ files.forEach(function(file) {
 				var actualTime = Date.now() - start;
 				var ops = iterations * 1000 / actualTime;
 
-				console.log("%s: %d op/s", benchmark.name, Math.round(ops * 100) / 100);
+				console.log("%s on %s: %d op/s", file.name, benchmark.name, Math.round(ops * 100) / 100);
 			};
 
 			fs.readFile(filePath, "utf-8", function(error, content) {

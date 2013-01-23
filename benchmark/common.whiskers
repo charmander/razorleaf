@@ -1,0 +1,1 @@
+<!DOCTYPE html><html><head><meta charset="utf-8" /><title>{title}</title>{for stylesheet in stylesheets}<link rel="stylesheet" type="text/css" href="{stylesheet}" />{/for}{for script in scripts}<script type="text/javascript" src="{script}"></script>{/for}</head><body><p>Hello, <strong>world</strong>.</p></body></html>
