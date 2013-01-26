@@ -3,7 +3,7 @@
 var assert = require("assert");
 var vm = require("vm");
 
-var push = Array.prototype.push;
+var unshift = Array.prototype.unshift;
 
 function extend(destination, source) {
 	if(source !== undefined) {
@@ -55,7 +55,7 @@ function createModel(queue) {
 					element.children.push(createModel(item));
 				}
 			} else {
-				push.apply(queue, item);
+				unshift.apply(queue, item);
 			}
 		} else if(item instanceof LiteralString) {
 			element.children.push(item);
