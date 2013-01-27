@@ -1,5 +1,6 @@
-Razor Leaf is a template engine for HTML whose templates are simple JavaScript
-expressions. Arrays are converted into HTML by the following rules:
+Razor Leaf is a template engine for HTML whose templates are simple JavaScript.
+
+Arrays are converted into HTML by the following rules:
 
  - The HTML5 DTD, `<!DOCTYPE html>`, is added automatically.
 
