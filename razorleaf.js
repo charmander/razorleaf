@@ -1,7 +1,8 @@
 "use strict";
 
 var assert = require("assert");
-var vm = require("vm");
+var esprima = require("esprima");
+var escodegen = require("escodegen");
 
 var unshift = Array.prototype.unshift;
 
@@ -35,6 +36,44 @@ function escapeAttributeText(text) {
 
 function LiteralString(content) {
 	this.content = content;
+}
+
+function scriptToFunction(script) {
+	var stack = [];
+	var tree = esprima.parse(script);
+	var current = tree;
+
+	do {
+		if(current.type === "ExpressionStatement") {
+			current.expression = {
+				type: "AssignmentExpression",
+				operator: "=",
+				left: {
+					type: "Identifier",
+					name: "__retval"
+				},
+				right: current.expression
+			};
+		} else if(current.body) {
+			if(Array.isArray(current.body)) {
+				stack.push.apply(stack, current.body);
+			} else {
+				stack.push(current.body);
+			}
+		}
+
+		current = stack.pop();
+	} while(current);
+
+	tree.body.push({
+		type: "ReturnStatement",
+		argument: {
+			type: "Identifier",
+			name: "__retval"
+		}
+	});
+
+	return escodegen.generate(tree, {format: {compact: true}});
 }
 
 function createModel(queue) {
@@ -111,7 +150,7 @@ function renderElement(element, options) {
 
 function Template(template, filePath, options) {
 	this.filePath = filePath;
-	this.script = vm.createScript(template, filePath);
+	this.script = new Function(["data"], scriptToFunction(template));
 	this.options = extend({
 		dtd: "<!DOCTYPE html>",
 		xhtml: false,
@@ -120,8 +159,7 @@ function Template(template, filePath, options) {
 }
 
 Template.prototype.render = function(data) {
-	global.data = data;
-	var content = this.script.runInThisContext();
+	var content = this.script(data);
 
 	assert(Array.isArray(content) && typeof content[0] === "string" && content[0].slice(-1) !== "=");
 
