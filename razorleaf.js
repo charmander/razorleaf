@@ -67,6 +67,21 @@ function scriptToFunction(script) {
 		current = stack.pop();
 	} while(current);
 
+	tree.body.unshift({
+		type: "VariableDeclaration",
+		declarations: [
+			{
+				type: "VariableDeclarator",
+				id: {
+					type: "Identifier",
+					name: "__retval"
+				},
+				init: null
+			}
+		],
+		kind: "var"
+	});
+
 	tree.body.push({
 		type: "ReturnStatement",
 		argument: {
