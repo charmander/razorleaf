@@ -47,6 +47,11 @@ The possible options are:
  - `gzip`: Whether the response served by `Template.prototype.serve` should be
    compressed, defaulting to `false`.
 
+ - `debug`: If `true`, errors will have accurate line numbers and filenames;
+   otherwise, a far more efficient means of execution is used to evaluate
+   templates. (“Far more efficient” here means “one hundred times faster”;
+   be sure to disable this option in production.)
+
 ## Usage
 
     var fs = require("fs");

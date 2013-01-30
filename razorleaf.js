@@ -1,9 +1,11 @@
 "use strict";
 
 var assert = require("assert");
+var vm = require("vm");
 var esprima = require("esprima");
 var escodegen = require("escodegen");
 
+var push = Array.prototype.push;
 var unshift = Array.prototype.unshift;
 
 function extend(destination, source) {
@@ -56,7 +58,7 @@ function scriptToFunction(script) {
 			};
 		} else if(current.body) {
 			if(Array.isArray(current.body)) {
-				stack.push.apply(stack, current.body);
+				push.apply(stack, current.body);
 			} else {
 				stack.push(current.body);
 			}
@@ -150,16 +152,28 @@ function renderElement(element, options) {
 
 function Template(template, filePath, options) {
 	this.filePath = filePath;
-	this.script = new Function(["data"], scriptToFunction(template));
 	this.options = extend({
 		dtd: "<!DOCTYPE html>",
 		xhtml: false,
-		gzip: false
+		gzip: false,
+		debug: false
 	}, options);
+
+	if(this.options.debug) {
+		this.script = vm.createScript(template, filePath);
+	} else {
+		this.script = new Function(["data"], scriptToFunction(template));
+	}
 }
 
 Template.prototype.render = function(data) {
-	var content = this.script(data);
+	var content;
+
+	if(this.options.debug) {
+		content = this.script.runInNewContext({data: data});
+	} else {
+		content = this.script(data);
+	}
 
 	assert(Array.isArray(content) && typeof content[0] === "string" && content[0].slice(-1) !== "=");
 
