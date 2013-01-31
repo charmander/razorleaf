@@ -118,3 +118,20 @@ to the specified HTTP response.
  - Tag names aren’t checked for validity in HTML, nor are they checked
    for validity in their context.
  - The root element isn’t verified to be called `html`.
+
+# CoffeeScript
+
+Given that Razor Leaf templates are only JavaScript, some may find that
+CoffeeScript improves the syntax quite nicely in the case of arrays:
+
+    ["html"
+        ["head"
+            ["meta", ["charset=", "utf-8"]]
+            ["title", data.title]
+        ]
+        ["body"
+            ["h1", "Hello, world!"]
+        ]
+    ]
+
+However, any errors’ line numbers are not guaranteed to match properly.
