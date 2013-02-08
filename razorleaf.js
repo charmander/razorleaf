@@ -61,6 +61,10 @@ function scriptToFunction(script) {
 		var lastExpressionStatement = null;
 
 		current.forEach(function(item) {
+			if(item.type === "FunctionDeclaration") {
+				return;
+			}
+
 			if(item.type === "ExpressionStatement") {
 				lastExpressionStatement = item;
 			}
