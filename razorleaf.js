@@ -42,32 +42,54 @@ function LiteralString(content) {
 
 function scriptToFunction(script) {
 	var stack = [];
-	var tree = esprima.parse(script);
-	var current = tree;
+	var program = esprima.parse(script);
+	var current = program.body;
+
+	var makeReturn = function(statement) {
+		statement.expression = {
+			type: "AssignmentExpression",
+			operator: "=",
+			left: {
+				type: "Identifier",
+				name: "__retval"
+			},
+			right: statement.expression
+		};
+	};
 
 	do {
-		if(current.type === "ExpressionStatement") {
-			current.expression = {
-				type: "AssignmentExpression",
-				operator: "=",
-				left: {
-					type: "Identifier",
-					name: "__retval"
-				},
-				right: current.expression
-			};
-		} else if(current.body) {
-			if(Array.isArray(current.body)) {
-				push.apply(stack, current.body);
-			} else {
-				stack.push(current.body);
+		var lastExpressionStatement = null;
+
+		current.forEach(function(item) {
+			if(item.type === "ExpressionStatement") {
+				lastExpressionStatement = item;
 			}
+
+			if(item.body) {
+				if(Array.isArray(item.body)) {
+					stack.push(item.body);
+				} else {
+					stack.push([item.body]);
+				}
+			}
+
+			if(item.consequent) {
+				stack.push([item.consequent]);
+			}
+
+			if(item.alternate) {
+				stack.push([item.alternate]);
+			}
+		});
+
+		if(lastExpressionStatement) {
+			makeReturn(lastExpressionStatement);
 		}
 
 		current = stack.pop();
 	} while(current);
 
-	tree.body.unshift({
+	program.body.unshift({
 		type: "VariableDeclaration",
 		declarations: [
 			{
@@ -82,7 +104,7 @@ function scriptToFunction(script) {
 		kind: "var"
 	});
 
-	tree.body.push({
+	program.body.push({
 		type: "ReturnStatement",
 		argument: {
 			type: "Identifier",
@@ -90,7 +112,7 @@ function scriptToFunction(script) {
 		}
 	});
 
-	return escodegen.generate(tree, {format: {compact: true}});
+	return escodegen.generate(program, {format: {compact: true}});
 }
 
 function createModel(queue) {
