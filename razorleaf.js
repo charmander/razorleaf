@@ -5,7 +5,6 @@ var vm = require("vm");
 var esprima = require("esprima");
 var escodegen = require("escodegen");
 
-var push = Array.prototype.push;
 var unshift = Array.prototype.unshift;
 
 function extend(destination, source) {
@@ -158,19 +157,21 @@ function renderElement(element, options) {
 
 	var output = "<" + element.name;
 
-	Object.keys(element.attributes).forEach(function(attributeName) {
-		var attributeValue = element.attributes[attributeName];
+	for(var attributeName in element.attributes) {
+		if(element.attributes.hasOwnProperty(attributeName)) {
+			var attributeValue = element.attributes[attributeName];
 
-		if(attributeValue !== null && attributeValue !== undefined && attributeValue !== false) {
-			output += " " + attributeName;
+			if(attributeValue !== null && attributeValue !== undefined && attributeValue !== false) {
+				output += " " + attributeName;
 
-			if(attributeValue !== true) {
-				output += "=\"" + escapeAttributeText(String(attributeValue)) + "\"";
-			} else if(options.xhtml) {
-				output += "=\"" + attributeName + "\"";
+				if(attributeValue !== true) {
+					output += "=\"" + escapeAttributeText(String(attributeValue)) + "\"";
+				} else if(options.xhtml) {
+					output += "=\"" + attributeName + "\"";
+				}
 			}
 		}
-	});
+	}
 
 	if(isVoid) {
 		return options.xhtml ? output + " />" : output + ">";
@@ -178,7 +179,9 @@ function renderElement(element, options) {
 
 	output += ">";
 
-	element.children.forEach(function(child) {
+	for(var i = 0; i < element.children.length; i++) {
+		var child = element.children[i];
+
 		if(typeof child === "string") {
 			output += escapeText(child);
 		} else if(child instanceof LiteralString) {
@@ -186,7 +189,7 @@ function renderElement(element, options) {
 		} else {
 			output += renderElement(child, options);
 		}
-	});
+	}
 
 	return output + "</" + element.name + ">";
 }
