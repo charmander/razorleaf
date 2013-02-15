@@ -4,22 +4,18 @@ Arrays are converted into HTML by the following rules:
 
  - The HTML5 DTD, `<!DOCTYPE html>`, is added automatically.
 
- - An array whose first element is a string ending with an equals sign (`=`)
-   are treated as attributes of the parent element. The name of the attribute
-   is the first element of the array, without the equals sign, and its value
-   is the second element. (If the array’s length is not exactly 2, an error
-   is thrown.) The second attribute may be a boolean value if the attribute
-   is a boolean attribute. **`null` and `undefined` will cause the attribute
-   to be ignored.**
-
- - Otherwise, an array whose first element is a string will be treated as an
+ - An array whose first element is a string will be treated as an
    element. The first element will be the tag’s name, and the remaining
-   elements, its contents.
+   elements, its contents. If the second element is an object, it will be
+   treated as a map of attributes. If an attribute’s value is `null`,
+   `undefined`, or `false`, it is ignored.
 
  - Arrays whose first elements are not strings are inserted as if directly
    into the parent array.
 
  - A `razorleaf.LiteralString` is inserted directly.
+
+ - `null` and `undefined` are ignored.
 
  - All other objects are converted to strings and escaped.
 
@@ -38,11 +34,6 @@ The possible options are:
 
  - `doctype`: The DTD that should be used, defaulting to `<!DOCTYPE html>`.
    Specify `null` for no DTD.
-
- - `xhtml`: Whether XHTML-style tags and attributes should be used,
-   defaulting to `false`. If `true`, void elements are expressed
-   using the self-closing tag syntax (as in `<br />`), and boolean
-   attributes use their name as a value when present (as in `checked="checked"`).
 
  - `gzip`: Whether the response served by `Template.prototype.serve` should be
    compressed, defaulting to `false`.
@@ -65,7 +56,7 @@ The possible options are:
 
     ["html",
         ["head",
-            ["meta", ["charset=", "utf-8"]],
+            ["meta", {charset: "utf-8"}],
             ["title", data.title]
         ],
         ["body",
@@ -117,20 +108,19 @@ to the specified HTTP response.
  - Attribute names aren’t checked for validity in XML.
  - Tag names aren’t checked for validity in HTML, nor are they checked
    for validity in their context.
- - The root element isn’t verified to be called `html`.
 
 # CoffeeScript
 
 Given that Razor Leaf templates are only JavaScript, some may find that
 CoffeeScript improves the syntax quite nicely in the case of arrays:
 
-    ["html"
-        ["head"
-            ["meta", ["charset=", "utf-8"]]
-            ["title", data.title]
+    ['html'
+        ['head'
+            ['meta', charset: 'utf-8']
+            ['title', data.title]
         ]
-        ["body"
-            ["h1", "Hello, world!"]
+        ['body'
+            ['h1', 'Hello, world!']
         ]
     ]
 

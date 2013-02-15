@@ -6,6 +6,7 @@ var esprima = require("esprima");
 var escodegen = require("escodegen");
 
 var unshift = Array.prototype.unshift;
+var toString = Object.prototype.toString;
 
 function extend(destination, source) {
 	if(source !== undefined) {
@@ -118,87 +119,57 @@ function scriptToFunction(script) {
 	return escodegen.generate(program, {format: {compact: true}});
 }
 
-function createModel(queue) {
-	var element = {name: queue.shift(), attributes: {}, children: []};
+function render(queue) {
+	var name = queue.shift();
+	var rendered = "<" + name;
+
+	if(toString.call(queue[0]) === "[object Object]") {
+		var attributes = queue.shift();
+
+		for(var x in attributes) {
+			if(attributes.hasOwnProperty(x)) {
+				var value = attributes[x];
+
+				if(value !== null && value !== undefined && value !== false) {
+					rendered += " " + x;
+
+					if(value !== true) {
+						rendered += "=\"" + escapeAttributeText(String(value)) + "\"";
+					}
+				}
+			}
+		}
+	}
+
+	rendered += ">";
+
+	if(voidTags.indexOf(name.toLowerCase()) !== -1) {
+		return rendered;
+	}
 
 	while(queue.length > 0) {
 		var item = queue.shift();
 
 		if(Array.isArray(item)) {
 			if(typeof item[0] === "string") {
-				if(item[0].slice(-1) === "=") {
-					if(item.length !== 2) {
-						throw new TypeError("An attribute array should have exactly 2 elements.");
-					}
-
-					element.attributes[item[0].slice(0, -1)] = item[1];
-				} else {
-					element.children.push(createModel(item));
-				}
+				rendered += render(item);
 			} else {
 				unshift.apply(queue, item);
 			}
 		} else if(item instanceof LiteralString) {
-			element.children.push(item);
+			rendered += item.content;
 		} else if(item !== null && item !== undefined) {
-			element.children.push(String(item));
+			rendered += escapeText(String(item));
 		}
 	}
 
-	return element;
-}
-
-function renderElement(element, options) {
-	var isVoid = (voidTags.indexOf(element.name.toLowerCase()) !== -1);
-
-	if(isVoid && element.children.length > 0) {
-		throw new Error("Expected void element “" + element.name + "” to be empty.");
-	}
-
-	var output = "<" + element.name;
-
-	for(var attributeName in element.attributes) {
-		if(element.attributes.hasOwnProperty(attributeName)) {
-			var attributeValue = element.attributes[attributeName];
-
-			if(attributeValue !== null && attributeValue !== undefined && attributeValue !== false) {
-				output += " " + attributeName;
-
-				if(attributeValue !== true) {
-					output += "=\"" + escapeAttributeText(String(attributeValue)) + "\"";
-				} else if(options.xhtml) {
-					output += "=\"" + attributeName + "\"";
-				}
-			}
-		}
-	}
-
-	if(isVoid) {
-		return options.xhtml ? output + " />" : output + ">";
-	}
-
-	output += ">";
-
-	for(var i = 0; i < element.children.length; i++) {
-		var child = element.children[i];
-
-		if(typeof child === "string") {
-			output += escapeText(child);
-		} else if(child instanceof LiteralString) {
-			output += child.content;
-		} else {
-			output += renderElement(child, options);
-		}
-	}
-
-	return output + "</" + element.name + ">";
+	return rendered + "</" + name + ">";
 }
 
 function Template(template, filePath, options) {
 	this.filePath = filePath;
 	this.options = extend({
 		dtd: "<!DOCTYPE html>",
-		xhtml: false,
 		gzip: false,
 		debug: false
 	}, options);
@@ -221,9 +192,7 @@ Template.prototype.render = function(data) {
 
 	assert(Array.isArray(content) && typeof content[0] === "string" && content[0].slice(-1) !== "=");
 
-	var model = createModel(content);
-
-	return this.options.dtd + renderElement(model, this.options);
+	return this.options.dtd + render(content);
 };
 
 module.exports.Template = Template;

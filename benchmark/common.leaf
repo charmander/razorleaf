@@ -1,22 +1,22 @@
 ["html",
 	["head",
-		["meta", ["charset=", "utf-8"]],
+		["meta", {charset: "utf-8"}],
 
 		["title", data.title],
 
 		data.stylesheets.map(function(stylesheet) {
-			return ["link",
-				["rel=", "stylesheet"],
-				["type=", "text/css"],
-				["href=", stylesheet]
-			];
+			return ["link", {
+				rel: "stylesheet",
+				type: "text/css",
+				href: stylesheet
+			}];
 		}),
 
 		data.scripts.map(function(script) {
-			return ["script",
-				["type=", "text/javascript"],
-				["src=", script]
-			];
+			return ["script", {
+				type: "text/javascript",
+				src: script
+			}];
 		})
 	],
 	["body",

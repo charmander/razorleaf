@@ -1,12 +1,12 @@
 {
 	"name": "razorleaf",
-	"version": "0.5.4",
+	"version": "0.6.0",
 	"main": "razorleaf.js",
 	"files": ["razorleaf.js"],
 	"description": "A template engine for HTML.",
 	"keywords": ["template", "bulbasaur"],
 	"dependencies": {
 		"esprima": "~1.0.2",
-		"escodegen": "~0.0.15"
+		"escodegen": "~0.0.16"
 	}
 }
