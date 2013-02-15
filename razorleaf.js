@@ -190,7 +190,7 @@ Template.prototype.render = function(data) {
 		content = this.script(data);
 	}
 
-	assert(Array.isArray(content) && typeof content[0] === "string" && content[0].slice(-1) !== "=");
+	assert(Array.isArray(content) && typeof content[0] === "string", "Completion value has a valid structure");
 
 	return this.options.dtd + render(content);
 };
