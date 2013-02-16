@@ -1,6 +1,6 @@
 {
 	"name": "razorleaf",
-	"version": "0.6.1",
+	"version": "0.6.2",
 	"main": "razorleaf.js",
 	"files": ["razorleaf.js"],
 	"description": "A template engine for HTML.",
@@ -8,5 +8,9 @@
 	"dependencies": {
 		"esprima": "~1.0.2",
 		"escodegen": "~0.0.16"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git://charmander.me/razorleaf"
 	}
 }
