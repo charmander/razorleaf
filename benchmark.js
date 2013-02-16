@@ -55,7 +55,7 @@ if(process.argv.indexOf("--single") === -1) {
 			name: "Jade",
 			extension: "jade",
 			run: function(time, content, data) {
-				var template = jade.compile(content, {compileDebug: false});
+				var template = jade.compile(content, {compileDebug: false, self: true});
 
 				time(function() {
 					template(data);

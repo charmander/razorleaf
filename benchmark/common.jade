@@ -4,12 +4,12 @@ html
 	head
 		meta(charset="utf-8")
 
-		title= title
+		title= self.title
 
-		for stylesheet in stylesheets
+		for stylesheet in self.stylesheets
 			link(rel="stylesheet", type="text/css", href=stylesheet)
 
-		for script in scripts
+		for script in self.scripts
 			script(type="text/javascript", src=script)
 	body
 		p
