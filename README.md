@@ -125,3 +125,26 @@ CoffeeScript improves the syntax quite nicely in the case of arrays:
     ]
 
 However, any errors’ line numbers are not guaranteed to match properly.
+
+# Nesting and extending templates
+
+Because Razor Leaf templates are JavaScript programs, nesting and extending
+templates is only a matter of further nesting arrays.
+
+    var navigation = require("./navigation.leaf");
+
+    ["html",
+        ["body",
+            ["h1", "A page"],
+            navigation(),
+            ["p", "Page content"]
+        ]
+    ]
+
+---
+
+    module.exports = function() {
+        return ["ul", {id: "navigation"},
+            ["li", ["a", {href: "."}, "Home"]]
+        ];
+    };
