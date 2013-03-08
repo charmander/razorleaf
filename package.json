@@ -1,16 +1,8 @@
 {
 	"name": "razorleaf",
-	"version": "0.6.2",
+	"version": "0.7.0",
 	"main": "razorleaf.js",
 	"files": ["razorleaf.js"],
-	"description": "A template engine for HTML.",
-	"keywords": ["template", "bulbasaur"],
-	"dependencies": {
-		"esprima": "~1.0.2",
-		"escodegen": "~0.0.16"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git://charmander.me/razorleaf"
-	}
+	"description": "A template engine for HTML",
+	"keywords": ["template", "bulbasaur"]
 }
