@@ -439,6 +439,41 @@ function parse(template) {
 	return root;
 }
 
+function compileStatic(element) {
+	var isVoid = voidTags.indexOf(element.name) !== -1;
+	var startTag = "<" + element.name;
+	var content = "";
+
+	for(var i = 0; i < element.children.length; i++) {
+		var child = element.children[i];
+
+		if(child.type === "attribute") {
+			startTag += " " + child.name + "=\"" + child.value.toAttributeValue() + "\"";
+		} else if(child.type === "element") {
+			var staticMarkup = compileStatic(child);
+
+			if(staticMarkup === null) {
+				return null;
+			}
+
+			content += staticMarkup;
+		} else if(child.type === "string") {
+			content += child.content.toContent();
+		} else {
+			return null;
+		}
+	}
+
+	if(isVoid) {
+		if(content) {
+			throw new SyntaxError("Void element " + element.name + " cannot contain elements."); // TODO: Where‽
+		}
+
+		return startTag + ">";
+	}
+
+	return startTag + ">" + content + "</" + element.name + ">";
+}
 
 function compileChildren(children) {
 	var info = {attributes: false, content: false};
@@ -455,6 +490,13 @@ function compileChildren(children) {
 
 		if(child.type === "element") {
 			info.content = true;
+
+			var staticMarkup = compileStatic(child);
+
+			if(staticMarkup !== null) {
+				return "__top.content += '" + staticMarkup + "';";
+			}
+
 			var isVoid = voidTags.indexOf(child.name) !== -1;
 			var children = compileChildren(child.children);
 			var compiled = "__top.content += '<" + child.name + "';\n__top = {attributes: '', content: '', next: __top};\n";
