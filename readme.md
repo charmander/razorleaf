@@ -31,7 +31,7 @@ html
       ' of Razor Leaf’s features.'
 ```
 
-```
+```javascript
 var fs = require("fs");
 var razorleaf = require("razorleaf");
 var template = razorleaf.compile(fs.readFileSync("views/template.leaf", "utf8"));
@@ -86,7 +86,6 @@ appropriate.
 
 ## Upcoming features
 
-- `elif` and `else`
 - Replaceable blocks and template extension/inclusion
 - Literal (unescaped) strings
 
