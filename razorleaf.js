@@ -51,7 +51,7 @@ InterpolatedString.prototype.toAttributeValue = function() {
 		}
 
 		return "' + __escapeAttributeValue((" + part.expression + "\n)) + '";
-	});
+	}).join("");
 };
 
 InterpolatedString.prototype.toContent = function() {
@@ -61,7 +61,7 @@ InterpolatedString.prototype.toContent = function() {
 		}
 
 		return "' + __escapeContent((" + part.expression + "\n)) + '";
-	});
+	}).join("");
 };
 
 function Parser(template) {
