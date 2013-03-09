@@ -8,7 +8,7 @@ var identifierCharacter = /[\w\-]/;
 var whitespaceCharacter = /[^\S\n]/;
 var interpolatedStringPart = /#{((?:\\.|[^}])+)}|./g;
 var voidTags = ["area", "base", "br", "col", "command", "embed", "hr", "img", "input", "keygen", "link", "meta", "param", "source", "track", "wbr"];
-var templateUtilities = "var __amp = /&/g, __quot = /\"/g, __lt = /</g, __gt = />/g, __escapeAttributeValue = function(string) { return string.replace(__amp, '&amp;').replace(__quot, '&quot;'); }, __escapeContent = function(string) { return string.replace(__amp, '&amp;').replace(__lt, '&lt;').replace(__gt, '&gt;'); };\n";
+var templateUtilities = "var __amp = /&/g, __quot = /\"/g, __lt = /</g, __gt = />/g, __escapeAttributeValue = function(string) { return String(string).replace(__amp, '&amp;').replace(__quot, '&quot;'); }, __escapeContent = function(string) { return String(string).replace(__amp, '&amp;').replace(__lt, '&lt;').replace(__gt, '&gt;'); };\n";
 
 function escapeAttributeValue(string) {
 	return string.replace(/&/g, "&amp;")
