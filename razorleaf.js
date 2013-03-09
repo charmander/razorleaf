@@ -250,41 +250,79 @@ var control = {
 			identifier: identifier,
 			context: context,
 			children: this.readBlock(indent),
-			compile: function(parent) {
-				parent.addContent("';\n(function(__iterating) {\nfor(var __i = 0; __i < __iterating.length; __i++) {\nvar " + this.identifier + " = __iterating[__i];\n__output += '");
-				var oldAddAttribute = parent.addAttribute;
-				parent.addAttribute = function() {
-					throw new SyntaxError("Attribute cannot appear inside loop."); // TODO: Where‽
-				};
-				addChildren(parent, this.children);
-				parent.addAttribute = oldAddAttribute;
-				parent.addContent("';\n}\n})((" + this.context + "));\n__output += '");
+			compile: function() {
+				var children = compileChildren(this.children);
+
+				if(children.attributes) {
+					throw new SyntaxError("Attributes are not allowed directly inside loops."); // TODO: Where‽
+				}
+
+				var code = "(function(__iterating) {\nvar __i, " + this.identifier + ";\nfor(__i = 0; " + this.identifier + " = __iterating[__i]; __i++) {\n";
+				code += children.code;
+				code += "\n}\n})((" + this.context + "));";
+
+				return {attributes: false, content: children.content, code: code};
 			}
 		};
 	},
 	if: function(indent) {
 		this.readWhitespace();
 
+		var condition = this.readLine();
+		var success = this.readBlock(indent);
+		while(this.readBlankLine()) {
+			// Ignore
+		}
+		var failure;
+
+		if(this.readExact(indent) && this.readExact("else")) {
+			if(!this.readBlankLine()) {
+				throw new SyntaxError("Expected end of line at line " + this.line + ", character " + this.character + ".");
+			}
+
+			failure = this.readBlock(indent);
+		}
+
 		return {
 			type: "if",
-			condition: this.readLine(),
-			children: this.readBlock(indent),
-			compile: function(parent) {
-				parent.addAttribute("';\nvar __condition = (" + this.condition + "\n);\nif(__condition) {\n__output += '");
-				parent.addContent("';\nif(__condition) {\n__output += '");
-				addChildren(parent, this.children);
-				parent.addAttribute("';\n}\n__output += '");
-				parent.addContent("';\n}\n__output += '");
+			condition: condition,
+			success: success,
+			failure: failure,
+			compile: function() {
+				var success = compileChildren(this.success);
+				var info = {attributes: success.attributes, content: success.content};
+				info.code = "if(" + this.condition + "\n) {\n" + success.code + "\n}";
+
+				if(this.failure) {
+					var failure = compileChildren(this.failure);
+
+					if(failure.attributes) {
+						info.attributes = true;
+					}
+
+					if(failure.content) {
+						info.content = true;
+					}
+
+					info.code += " else {\n" + failure.code + "\n}";
+				}
+
+				info.code += "\n";
+
+				return info;
 			}
 		};
 	},
+	else: function() {
+		throw new SyntaxError("Unexpected else at line " + this.line + ", character " + this.character + ".");
+	},
 	doctype: function(indent) {
-		this.readBlock(indent);
+		assert.strictEqual(this.readBlock(indent).length, 0, "doctype does not contain elements");
 
 		return {
 			type: "doctype",
-			compile: function(parent) {
-				parent.addContent("<!DOCTYPE html>");
+			compile: function() {
+				return {content: false, attributes: false, code: "__top.content += '<!DOCTYPE html>';"};
 			}
 		};
 	}
@@ -401,68 +439,79 @@ function parse(template) {
 	return root;
 }
 
-function compileElement(element) {
-	var isVoid = voidTags.indexOf(element.name) !== -1;
-	var compiled = "<" + element.name;
-	var content = "";
-	var manager = {
-		name: element.name,
-		isVoid: isVoid,
-		addContent: function(element) {
-			content += element;
-		},
-		addAttribute: function(attribute) {
-			compiled += attribute;
-		}
-	};
 
-	if(element.children) {
-		addChildren(manager, element.children);
-	}
-
-	compiled += ">" + content;
-
-	if(!isVoid) {
-		compiled += "</" + element.name + ">";
-	}
-
-	return compiled;
-}
-
-function addChildren(parent, children) {
-	children.forEach(function(child) {
+function compileChildren(children) {
+	var info = {attributes: false, content: false};
+	info.code = children.map(function(child) {
 		if(child.type === "attribute") {
-			parent.addAttribute(" " + child.name);
+			info.attributes = true;
 
-			if(child.value !== null) {
-				parent.addAttribute("=\"" + child.value.toAttributeValue() + "\"");
+			if(child.value) {
+				return "__top.attributes += ' " + child.name + "=\"" + child.value.toAttributeValue() + "\"';";
+			} else {
+				return "__top.attributes += ' " + child.name + "';";
 			}
-		} else if(child.type === "element") {
-			if(parent.isVoid && child.name) {
-				throw new SyntaxError("Void element <" + parent.name + "> cannot have child elements.");
-			}
-
-			parent.addContent(compileElement(child));
-		} else if(child.type === "string") {
-			parent.addContent(child.content.toContent());
-		} else {
-			child.compile(parent);
 		}
-	});
+
+		if(child.type === "element") {
+			info.content = true;
+			var isVoid = voidTags.indexOf(child.name) !== -1;
+			var children = compileChildren(child.children);
+			var compiled = "__top.content += '<" + child.name + "';\n__top = {attributes: '', content: '', next: __top};\n";
+			compiled += children.code;
+
+			var parts = [];
+
+			if(children.attributes) {
+				parts.push("__top.attributes");
+			}
+
+			parts.push("'>'");
+
+			if(children.content) {
+				if(isVoid) {
+					throw new SyntaxError("Void element " + child.name + " cannot contain elements."); // TODO: Where‽
+				}
+
+				parts.push("__top.content");
+			}
+
+			if(!isVoid) {
+				parts.push("'</" + child.name + ">'");
+			}
+
+			compiled += "\n__top.next.content += " + parts.join(" + ") + ";\n__top = __top.next;";
+
+			return compiled;
+		}
+
+		if(child.type === "string") {
+			info.content = true;
+			return "__top.content += '" + child.content.toContent() + "';";
+		}
+
+		var childInfo = child.compile();
+
+		if(childInfo.attributes) {
+			info.attributes = true;
+		}
+
+		if(childInfo.content) {
+			info.content = true;
+		}
+
+		return childInfo.code;
+	}).join("\n");
+
+	return info;
 }
 
 function compile(template) {
 	var tree = parse(template);
+	var compiled = templateUtilities + "var __top = {attributes: null, content: '', next: null};\n";
 
-	var compiled = templateUtilities + "var __output = '";
-
-	addChildren({
-		addContent: function(content) {
-			compiled += content;
-		}
-	}, tree);
-
-	compiled += "';\nreturn __output;";
+	compiled += compileChildren(tree).code;
+	compiled += "\n\nreturn __top.content;";
 
 	return new Function(["data"], compiled);
 }
