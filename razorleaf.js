@@ -6,7 +6,6 @@ var push = Array.prototype.push;
 
 var identifierCharacter = /[\w\-]/;
 var whitespaceCharacter = /[^\S\n]/;
-var interpolatedStringPart = /#{((?:\\.|[^}])+)}|./g;
 var voidTags = ["area", "base", "br", "col", "command", "embed", "hr", "img", "input", "keygen", "link", "meta", "param", "source", "track", "wbr"];
 var templateUtilities = "var __amp = /&/g, __quot = /\"/g, __lt = /</g, __gt = />/g, __escapeAttributeValue = function(string) { return String(string).replace(__amp, '&amp;').replace(__quot, '&quot;'); }, __escapeContent = function(string) { return String(string).replace(__amp, '&amp;').replace(__lt, '&lt;').replace(__gt, '&gt;'); };\n";
 
@@ -21,27 +20,8 @@ function escapeContent(string) {
 	             .replace(/>/g, "&gt;");
 }
 
-function InterpolatedString(string) {
-	this.parts = [];
-	var current = "";
-	var m;
-
-	while((m = interpolatedStringPart.exec(string)) !== null) {
-		if(m[1] === undefined) {
-			current += m[0];
-		} else {
-			if(current) {
-				this.parts.push(current);
-				current = "";
-			}
-
-			this.parts.push({expression: m[1]});
-		}
-	}
-
-	if(current) {
-		this.parts.push(current);
-	}
+function InterpolatedString(parts) {
+	this.parts = parts;
 }
 
 InterpolatedString.prototype.toAttributeValue = function() {
@@ -193,8 +173,10 @@ Parser.prototype.readString = function() {
 			return null;
 		}
 
-		var string = "";
+		var parts = [];
+		var currentPart = "";
 		var escaped = false;
+		var interpolating = false;
 
 		while(true) {
 			if(!this.peek()) {
@@ -203,20 +185,36 @@ Parser.prototype.readString = function() {
 				escaped = false;
 			} else if(this.peek() === "\\") {
 				escaped = true;
+			} else if(interpolating) {
+				if(this.readExact("}")) {
+					interpolating = false;
+					parts.push({expression: currentPart});
+					currentPart = "";
+					continue;
+				}
+			} else if(this.readExact("#{")) {
+				interpolating = true;
+				parts.push(currentPart);
+				currentPart = "";
+				continue;
 			} else if(this.readExact(quote)) {
 				break;
 			}
 
-			if(this.peek() === "'") {
-				string += "\\";
+			if(!interpolating && this.peek() === "'") {
+				currentPart += "\\";
 			}
 
-			string += this.read();
+			currentPart += this.read();
+		}
+
+		if(currentPart) {
+			parts.push(currentPart);
 		}
 
 		return {
 			type: "string",
-			content: new InterpolatedString(string)
+			content: new InterpolatedString(parts)
 		};
 	});
 };
