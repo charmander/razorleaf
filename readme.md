@@ -29,6 +29,8 @@ html
 
     p id: 'content' 'This template demonstrates ' em 'most'
       ' of Razor Leaf’s features.'
+
+    !'Literal <abbr title="HyperText Markup Language">HTML</abbr> content can be written using a string with a leading exclamation mark.'
 ```
 
 ```javascript
@@ -70,7 +72,8 @@ boolean.
 Strings may be delimited by either single or double quotes. Any expression
 between `#{` and `}` is interpolated. When interpolating, quotes do not need to
 be escaped, but a closing brace (`}`) does. Strings’ contents are escaped as
-appropriate.
+appropriate. Unescaped strings are marked up with a `!` before the opening
+delimiter.
 
 ### Special blocks
 
@@ -87,6 +90,5 @@ appropriate.
 ## Upcoming features
 
 - Replaceable blocks and template extension/inclusion
-- Literal (unescaped) strings
 
 [Jade]: http://jade-lang.com/

@@ -20,11 +20,26 @@ function escapeContent(string) {
 	             .replace(/>/g, "&gt;");
 }
 
-function InterpolatedString(parts) {
+function InterpolatedString(parts, unescaped) {
 	this.parts = parts;
+	this.unescaped = unescaped;
 }
 
+InterpolatedString.prototype.toUnescapedContent = function() {
+	return this.parts.map(function(part) {
+		if(typeof part === "string") {
+			return part;
+		}
+
+		return "' + (" + part.expression + "\n) + '";
+	}).join("");
+};
+
 InterpolatedString.prototype.toAttributeValue = function() {
+	if(this.unescaped) {
+		return this.toUnescapedContent();
+	}
+
 	return this.parts.map(function(part) {
 		if(typeof part === "string") {
 			return escapeAttributeValue(part);
@@ -35,6 +50,10 @@ InterpolatedString.prototype.toAttributeValue = function() {
 };
 
 InterpolatedString.prototype.toContent = function() {
+	if(this.unescaped) {
+		return this.toUnescapedContent();
+	}
+
 	return this.parts.map(function(part) {
 		if(typeof part === "string") {
 			return escapeContent(part);
@@ -167,6 +186,7 @@ Parser.prototype.readLine = function() {
 
 Parser.prototype.readString = function() {
 	return this.reading(function() {
+		var unescaped = !!this.readExact("!");
 		var quote = this.read();
 
 		if(quote !== "\"" && quote !== "'") {
@@ -214,7 +234,7 @@ Parser.prototype.readString = function() {
 
 		return {
 			type: "string",
-			content: new InterpolatedString(parts)
+			content: new InterpolatedString(parts, unescaped)
 		};
 	});
 };
