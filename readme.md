@@ -83,7 +83,7 @@ delimiter.
 
 - `if (expression)` will evaluate `(expression)` (the remainder of the line) as
   JavaScript and include the block if the result is truthy (by the same rules
-  as JavaScript’s `if`).
+  as JavaScript’s `if`). It may be followed by an `else` block.
 
 - `doctype` will insert the string `<!DOCTYPE html>`.
 
