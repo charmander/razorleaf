@@ -1,0 +1,26 @@
+doctype
+
+html lang: 'en'
+	head
+		meta charset: 'utf-8'
+
+		title '#{data.title} — A demo'
+
+		for script in data.scripts
+			script type: 'text/javascript' src: '#{script.url}'
+				if script.async
+					async:
+
+		for stylesheet in data.stylesheets
+			link
+				rel: 'stylesheet'
+				type: 'text/css'
+				href: '#{stylesheet.url}'
+
+	body
+		h1 id: 'title'
+			'An example'
+
+		p id: 'content' 'Hello, ' em 'world!'
+
+		!'This should be <strong>literal</strong>.'
