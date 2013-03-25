@@ -567,6 +567,10 @@ function compileChildren(children) {
 }
 
 function compile(template) {
+	if(typeof template !== "string") {
+		throw new TypeError("Template should be a string.");
+	}
+
 	var tree = parse(template);
 	var compiled = templateUtilities + "var __top = {attributes: null, content: '', next: null};\n";
 
