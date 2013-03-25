@@ -577,7 +577,7 @@ function compile(template) {
 	compiled += compileChildren(tree).code;
 	compiled += "\n\nreturn __top.content;";
 
-	return new Function(["data"], compiled);
+	return new Function("data", compiled);
 }
 
 module.exports.compile = compile;
