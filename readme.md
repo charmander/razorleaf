@@ -65,7 +65,8 @@ special blocks.
 
 Attributes use the syntax `name: 'value'`. The value is optional, and must be a
 string if provided. If a value is not provided, the attribute is assumed to be
-boolean.
+boolean. Whitespace between the colon and value is required, as both attribute
+and element names may contain colons.
 
 ### Strings
 

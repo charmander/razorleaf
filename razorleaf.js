@@ -131,8 +131,12 @@ Parser.prototype.reading = function(reader) {
 	return null;
 };
 
-Parser.prototype.peek = function() {
-	return this.template[this.index + 1] || null;
+Parser.prototype.peek = function(n) {
+	if(n === undefined) {
+		n = 1;
+	}
+
+	return this.template[this.index + n] || null;
 };
 
 Parser.prototype.read = function() {
@@ -170,7 +174,8 @@ Parser.prototype.readIdentifier = function() {
 	return this.reading(function() {
 		var identifier = "";
 
-		while(this.peek() && identifierCharacter.test(this.peek())) {
+		while(this.peek() && (identifierCharacter.test(this.peek()) ||
+				(this.peek() === ":" && (!this.peek(2) || !whitespaceCharacter.test(this.peek(2)))))) {
 			identifier += this.read();
 		}
 
