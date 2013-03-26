@@ -642,7 +642,7 @@ function compile(template, options) {
 		throw new TypeError("Template should be a string.");
 	}
 
-	var tree = parse(template);
+	var tree = parse(template + "\n");
 	var compiled = compileChildren(tree, options);
 	var body =
 		createUtilities(compiled.utilities) +
