@@ -7,7 +7,46 @@ var push = Array.prototype.push;
 var identifierCharacter = /[\w\-]/;
 var whitespaceCharacter = /[^\S\n]/;
 var voidTags = ["area", "base", "br", "col", "command", "embed", "hr", "img", "input", "keygen", "link", "meta", "param", "source", "track", "wbr"];
-var templateUtilities = "var __amp = /&/g, __quot = /\"/g, __lt = /</g, __gt = />/g, __escapeAttributeValue = function(string) { return String(string).replace(__amp, '&amp;').replace(__quot, '&quot;'); }, __escapeContent = function(string) { return String(string).replace(__amp, '&amp;').replace(__lt, '&lt;').replace(__gt, '&gt;'); };\n";
+var templateUtilities = {
+	__amp: {value: /&/g, dependencies: []},
+	__quot: {value: /"/g, dependencies: []},
+	__lt: {value: /</g, dependencies: []},
+	__gt: {value: />/g, dependencies: []},
+	__escapeAttributeValue: {
+		value: function(string) {
+			return String(string).replace(__amp, "&amp;").replace(__quot, "&quot;");
+		},
+		dependencies: ["__amp", "__quot"]
+	},
+	__escapeContent: {
+		value: function(string) {
+			return String(string).replace(__amp, "&amp;").replace(__lt, "&lt;").replace(__gt, "&gt;");
+		},
+		dependencies: ["__amp", "__lt", "__gt"]
+	}
+};
+
+function createUtilities(names) {
+	if(names.length === 0) {
+		return "";
+	}
+
+	var used = {};
+	var needed = names.slice();
+
+	while(needed.length > 0) {
+		var name = needed.pop();
+
+		if(!used.hasOwnProperty(name)) {
+			used[name] = templateUtilities[name].value;
+			push.apply(needed, templateUtilities[name].dependencies);
+		}
+	}
+
+	return "var " + Object.keys(used).map(function(name) {
+		return name + " = " + used[name];
+	}).join(", ") + ";\n";
+}
 
 function escapeAttributeValue(string) {
 	return string.replace(/&/g, "&amp;")
@@ -23,6 +62,9 @@ function escapeContent(string) {
 function InterpolatedString(parts, unescaped) {
 	this.parts = parts;
 	this.unescaped = unescaped;
+	this.interpolated = parts.some(function(part) {
+		return typeof part !== "string";
+	});
 }
 
 InterpolatedString.prototype.toUnescapedContent = function() {
@@ -279,7 +321,7 @@ var control = {
 				code += children.code;
 				code += "\n}\n})((" + this.context + "));";
 
-				return {attributes: false, content: children.content, code: code};
+				return {attributes: false, content: children.content, code: code, utilities: children.utilities};
 			}
 		};
 	},
@@ -308,7 +350,7 @@ var control = {
 			failure: failure,
 			compile: function() {
 				var success = compileChildren(this.success);
-				var info = {attributes: success.attributes, content: success.content};
+				var info = {attributes: success.attributes, content: success.content, utilities: success.utilities};
 				info.code = "if(" + this.condition + "\n) {\n" + success.code + "\n}";
 
 				if(this.failure) {
@@ -321,6 +363,8 @@ var control = {
 					if(failure.content) {
 						info.content = true;
 					}
+
+					push.apply(info.utilities, failure.utilities);
 
 					info.code += " else {\n" + failure.code + "\n}";
 				}
@@ -340,7 +384,7 @@ var control = {
 		return {
 			type: "doctype",
 			compile: function() {
-				return {content: false, attributes: false, code: "__top.content += '<!DOCTYPE html>';"};
+				return {content: false, attributes: false, code: "__top.content += '<!DOCTYPE html>';", utilities: []};
 			}
 		};
 	}
@@ -458,6 +502,7 @@ function parse(template) {
 }
 
 function compileStatic(element) {
+	var utilities = [];
 	var isVoid = voidTags.indexOf(element.name) !== -1;
 	var startTag = "<" + element.name;
 	var content = "";
@@ -466,6 +511,10 @@ function compileStatic(element) {
 		var child = element.children[i];
 
 		if(child.type === "attribute") {
+			if(child.value.interpolated) {
+				utilities.push("__escapeAttributeValue");
+			}
+
 			startTag += " " + child.name + "=\"" + child.value.toAttributeValue() + "\"";
 		} else if(child.type === "element") {
 			var staticMarkup = compileStatic(child);
@@ -474,8 +523,13 @@ function compileStatic(element) {
 				return null;
 			}
 
-			content += staticMarkup;
+			push.apply(utilities, staticMarkup.utilities);
+			content += staticMarkup.code;
 		} else if(child.type === "string") {
+			if(child.content.interpolated) {
+				utilities.push("__escapeContent");
+			}
+
 			content += child.content.toContent();
 		} else {
 			return null;
@@ -487,19 +541,24 @@ function compileStatic(element) {
 			throw new SyntaxError("Void element " + element.name + " cannot contain elements."); // TODO: Where‽
 		}
 
-		return startTag + ">";
+		return {code: startTag + ">", utilities: utilities};
 	}
 
-	return startTag + ">" + content + "</" + element.name + ">";
+	return {code: startTag + ">" + content + "</" + element.name + ">", utilities: utilities};
 }
 
 function compileChildren(children) {
-	var info = {attributes: false, content: false};
+	var info = {attributes: false, content: false, utilities: []};
+
 	info.code = children.map(function(child) {
 		if(child.type === "attribute") {
 			info.attributes = true;
 
 			if(child.value) {
+				if(child.value.interpolated) {
+					info.utilities.push("__escapeAttributeValue");
+				}
+
 				return "__top.attributes += ' " + child.name + "=\"" + child.value.toAttributeValue() + "\"';";
 			} else {
 				return "__top.attributes += ' " + child.name + "';";
@@ -512,13 +571,18 @@ function compileChildren(children) {
 			var staticMarkup = compileStatic(child);
 
 			if(staticMarkup !== null) {
-				return "__top.content += '" + staticMarkup + "';";
+				push.apply(info.utilities, staticMarkup.utilities);
+				return "__top.content += '" + staticMarkup.code + "';";
 			}
 
 			var isVoid = voidTags.indexOf(child.name) !== -1;
 			var children = compileChildren(child.children);
-			var compiled = "__top.content += '<" + child.name + "';\n__top = {attributes: '', content: '', next: __top};\n";
-			compiled += children.code;
+
+			push.apply(info.utilities, children.utilities);
+
+			var compiled =
+				"__top.content += '<" + child.name + "';\n__top = {attributes: '', content: '', next: __top};\n" +
+				children.code;
 
 			var parts = [];
 
@@ -547,6 +611,11 @@ function compileChildren(children) {
 
 		if(child.type === "string") {
 			info.content = true;
+
+			if(child.content.interpolated) {
+				info.utilities.push("__escapeContent");
+			}
+
 			return "__top.content += '" + child.content.toContent() + "';";
 		}
 
@@ -560,24 +629,28 @@ function compileChildren(children) {
 			info.content = true;
 		}
 
+		push.apply(info.utilities, childInfo.utilities);
+
 		return childInfo.code;
 	}).join("\n");
 
 	return info;
 }
 
-function compile(template) {
+function compile(template, options) {
 	if(typeof template !== "string") {
 		throw new TypeError("Template should be a string.");
 	}
 
 	var tree = parse(template);
-	var compiled = templateUtilities + "var __top = {attributes: null, content: '', next: null};\n";
+	var compiled = compileChildren(tree, options);
+	var body =
+		createUtilities(compiled.utilities) +
+		"var __top = {attributes: null, content: '', next: null};\n" +
+		compiled.code +
+		"\n\nreturn __top.content;";
 
-	compiled += compileChildren(tree).code;
-	compiled += "\n\nreturn __top.content;";
-
-	return new Function("data", compiled);
+	return new Function("data", body);
 }
 
 module.exports.compile = compile;
