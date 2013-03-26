@@ -511,11 +511,15 @@ function compileStatic(element) {
 		var child = element.children[i];
 
 		if(child.type === "attribute") {
-			if(child.value.interpolated) {
-				utilities.push("__escapeAttributeValue");
-			}
+			if(child.value === null) {
+				startTag += " " + child.name;
+			} else {
+				if(child.value.interpolated) {
+					utilities.push("__escapeAttributeValue");
+				}
 
-			startTag += " " + child.name + "=\"" + child.value.toAttributeValue() + "\"";
+				startTag += " " + child.name + "=\"" + child.value.toAttributeValue() + "\"";
+			}
 		} else if(child.type === "element") {
 			var staticMarkup = compileStatic(child);
 
