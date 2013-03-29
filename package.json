@@ -8,5 +8,8 @@
 	"repository": {
 		"type": "git",
 		"url": "git://github.com/campersander/razorleaf"
+	},
+	"bugs": {
+		"url": "https://github.com/campersander/razorleaf/issues"
 	}
 }
