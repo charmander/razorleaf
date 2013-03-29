@@ -53,9 +53,29 @@ Object.keys(tests).forEach(function(templateType) {
 	tests[templateType].forEach(function(test) {
 		var content = fs.readFileSync(path.join(__dirname, "benchmark", test.file), "utf8");
 		var template = compiler.compile(content, test.options);
-		var start = Date.now();
-		var iterations = 0;
+		var start;
+		var iterations;
 		var elapsed;
+
+		iterations = 0;
+		start = Date.now();
+
+		while(true) {
+			elapsed = Date.now() - start;
+
+			if(elapsed >= DURATION) {
+				break;
+			}
+
+			compiler.compile(content, test.options);
+
+			iterations++;
+		}
+
+		console.log("Compiling %s on %s: ~%d op/s", test.name, templateType, Math.round(iterations / elapsed * 1000));
+
+		iterations = 0;
+		start = Date.now();
 
 		while(true) {
 			elapsed = Date.now() - start;
@@ -69,6 +89,6 @@ Object.keys(tests).forEach(function(templateType) {
 			iterations++;
 		}
 
-		console.log("%s on %s: ~%d op/s", test.name, templateType, Math.round(iterations / elapsed * 1000));
+		console.log("Rendering %s on %s: ~%d op/s", test.name, templateType, Math.round(iterations / elapsed * 1000));
 	});
 });
