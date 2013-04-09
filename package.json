@@ -1,8 +1,8 @@
 {
 	"name": "razorleaf",
-	"version": "0.10.0",
+	"version": "0.11.0",
 	"main": "razorleaf.js",
-	"files": ["razorleaf.js"],
+	"files": ["razorleaf.js", "compiler.js", "parser.js"],
 	"description": "A template engine for HTML",
 	"keywords": ["template", "bulbasaur"],
 	"repository": {
@@ -11,5 +11,8 @@
 	},
 	"bugs": {
 		"url": "https://github.com/campersander/razorleaf/issues"
+	},
+	"dependencies": {
+		"index-format": "~1.0.0"
 	}
 }
