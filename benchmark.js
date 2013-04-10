@@ -4,7 +4,7 @@ var fs = require("fs");
 var path = require("path");
 
 var tests = {
-	razorleaf: [
+	"./razorleaf": [
 		{name: "static", file: "static.leaf"},
 		{name: "control", file: "control.leaf", data: {
 			title: "Hello, world!",
