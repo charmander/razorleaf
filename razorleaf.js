@@ -1,8 +1,8 @@
 "use strict";
 
-var compiler = require("./compiler");
-var parser = require("./parser");
-var __utilities = require("./template-utilities");
+var compiler = require("./lib/compiler");
+var parser = require("./lib/parser");
+var __utilities = require("./lib/template-utilities");
 
 function compile(template) {
 	var tree = parser.parse(template);

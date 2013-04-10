@@ -1,0 +1,35 @@
+#!/usr/bin/env node
+
+"use strict";
+
+var fs = require("fs");
+var path = require("path");
+var razorleaf = require("../razorleaf");
+
+for(var i = 2; i < process.argv.length; i++) {
+	var file = process.argv[i];
+
+	fs.readFile(file, "utf8", function(error, content) {
+		if(error) {
+			console.error(error);
+			process.exit(1);
+		}
+
+		var template = razorleaf.compile(content);
+		var outputFile = path.join(path.dirname(path.resolve(file)), path.basename(file, ".leaf") + ".html");
+
+		fs.writeFile(outputFile, template(), {
+			encoding: "utf8",
+			mode: 0x180
+		}, function(error) {
+			if(error) {
+				console.error(error);
+				process.exit(1);
+			}
+
+			console.log("Rendered %s as %s", file, outputFile);
+		});
+	});
+}
+
+// vim:ft=javascript
