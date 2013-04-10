@@ -1,55 +1,13 @@
 "use strict";
 
 var format = require("index-format");
-var push = Array.prototype.push;
 
 var voidTags = [
 	"area", "base", "br", "col", "command", "embed", "hr", "img", "input",
 	"keygen", "link", "meta", "param", "source", "track", "wbr"
 ];
 
-var templateUtilities = {
-	__amp: {value: /&/g, dependencies: []},
-	__quot: {value: /"/g, dependencies: []},
-	__lt: {value: /</g, dependencies: []},
-	__gt: {value: />/g, dependencies: []},
-	__escapeAttributeValue: {
-		value: "function(string) {\
-			return ('' + string).replace(__amp, '&amp;').replace(__quot, '&quot;');\
-		}",
-		dependencies: ["__amp", "__quot"]
-	},
-	__escapeContent: {
-		value: "function(string) {\
-			return ('' + string).replace(__amp, '&amp;').replace(__lt, '&lt;').replace(__gt, '&gt;');\
-		}",
-		dependencies: ["__amp", "__lt", "__gt"]
-	}
-};
-
-function createUtilities(names) {
-	if(names.length === 0) {
-		return "";
-	}
-
-	var used = {};
-	var needed = names.slice();
-
-	while(needed.length > 0) {
-		var name = needed.pop();
-
-		if(!used.hasOwnProperty(name)) {
-			used[name] = templateUtilities[name].value;
-			push.apply(needed, templateUtilities[name].dependencies);
-		}
-	}
-
-	return "var " + Object.keys(used).map(function(name) {
-		return name + " = " + used[name];
-	}).join(", ") + ";\n";
-}
-
-function interpolateAttributeValue(utilities, value) {
+function interpolateAttributeValue(value) {
 	var string = "";
 	var escaped = false;
 	var interpolated = false;
@@ -74,8 +32,7 @@ function interpolateAttributeValue(utilities, value) {
 			if(value.type === "raw_string") {
 				string += "' + ((";
 			} else {
-				string += "' + __escapeAttributeValue((";
-				utilities.push("__escapeAttributeValue");
+				string += "' + __utilities.escapeAttributeValue((";
 			}
 
 			continue;
@@ -95,7 +52,7 @@ function interpolateAttributeValue(utilities, value) {
 	return string;
 }
 
-function interpolateContent(utilities, value) {
+function interpolateContent(value) {
 	var string = "";
 	var escaped = false;
 	var interpolated = false;
@@ -120,8 +77,7 @@ function interpolateContent(utilities, value) {
 			if(value.type === "raw_string") {
 				string += "' + ((";
 			} else {
-				string += "' + __escapeContent((";
-				utilities.push("__escapeContent");
+				string += "' + __utilities.escapeContent((";
 			}
 
 			continue;
@@ -315,7 +271,7 @@ function getElementInfo(variables, element) {
 	}
 }
 
-function compileElement(utilities, variables, item) {
+function compileElement(variables, item) {
 	var info = {
 		content: new CodeString("__output")
 	};
@@ -334,10 +290,10 @@ function compileElement(utilities, variables, item) {
 				info.attributes.addString(" " + child.name);
 
 				if(child.value !== null) {
-					info.attributes.addString("=\"" + interpolateAttributeValue(utilities, child.value) + "\"");
+					info.attributes.addString("=\"" + interpolateAttributeValue(child.value) + "\"");
 				}
 			} else {
-				var compiled = compileElement(utilities, variables, child);
+				var compiled = compileElement(variables, child);
 
 				if(compiled.attributes) {
 					info.attributes.addCodeString(compiled.attributes);
@@ -356,7 +312,7 @@ function compileElement(utilities, variables, item) {
 
 	case "raw_string":
 	case "string":
-		info.content.addString(interpolateContent(utilities, item));
+		info.content.addString(interpolateContent(item));
 
 		break;
 
@@ -368,16 +324,15 @@ function compileElement(utilities, variables, item) {
 }
 
 function compile(root) {
-	var utilities = [];
 	var variables = {};
 
 	var code = root.children.map(function(item) {
-		var compiled = compileElement(utilities, variables, item);
+		var compiled = compileElement(variables, item);
 
 		return compiled.content.string;
 	}).join("");
 
-	return createUtilities(utilities) + "var " + Object.keys(variables).map(function(variable) {
+	return "var " + Object.keys(variables).map(function(variable) {
 		return variable + ", ";
 	}).join("") + "__output = '" + code + "';\nreturn __output;";
 }

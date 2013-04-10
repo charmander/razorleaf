@@ -1,8 +1,8 @@
 {
 	"name": "razorleaf",
-	"version": "0.11.0",
+	"version": "0.11.1",
 	"main": "razorleaf.js",
-	"files": ["razorleaf.js", "compiler.js", "parser.js"],
+	"files": ["razorleaf.js", "compiler.js", "parser.js", "template-utilities.js"],
 	"description": "A template engine for HTML",
 	"keywords": ["template", "bulbasaur"],
 	"repository": {
