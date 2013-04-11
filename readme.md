@@ -96,7 +96,7 @@ delimiter.
   JavaScript and include the block if the result is truthy (by the same rules
   as JavaScript’s `if`). It may be followed by an `else` block.
 
-- `include (name)` will call `options.load()` to retrieve a subtemplate and
+- `include (name)` will call `options.load(name)` to retrieve a subtemplate and
   insert its contents as if to replace the `include` block.
 
 - `doctype` will insert the string `<!DOCTYPE html>`.
