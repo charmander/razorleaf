@@ -43,11 +43,21 @@ console.log(template(data));
 
 ## API
 
-### `razorleaf.compile(template)`
+### `razorleaf.compile(template, [options])`
 
 Compiles a template and returns a function that renders the template
 and returns the result, taking an optional `data` argument usable inside
 the template.
+
+**`options`** is an object containing options for compilation:
+
+- `load`: A function that will be called to load parent and included
+  templates. It is required if either feature is used.
+
+### `razorleaf.defaults`
+
+An object that contains the default options for use with `razorleaf.compile()`.
+These are combined with any options passed to `compile`.
 
 ## Syntax
 
@@ -86,10 +96,13 @@ delimiter.
   JavaScript and include the block if the result is truthy (by the same rules
   as JavaScript’s `if`). It may be followed by an `else` block.
 
+- `include (name)` will call `options.load()` to retrieve a subtemplate and
+  insert its contents as if to replace the `include` block.
+
 - `doctype` will insert the string `<!DOCTYPE html>`.
 
 ## Upcoming features
 
-- Replaceable blocks and template extension/inclusion
+- Replaceable blocks and template extension
 
 [Jade]: http://jade-lang.com/
