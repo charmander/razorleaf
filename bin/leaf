@@ -15,8 +15,14 @@ for(var i = 2; i < process.argv.length; i++) {
 			process.exit(1);
 		}
 
-		var template = razorleaf.compile(content);
-		var outputFile = path.join(path.dirname(path.resolve(file)), path.basename(file, ".leaf") + ".html");
+		var directory = path.dirname(path.resolve(file));
+		var outputFile = path.join(directory, path.basename(file, ".leaf") + ".html");
+
+		var template = razorleaf.compile(content, {
+			load: function(name) {
+				return fs.readFileSync(path.join(directory, name + ".leaf"), "utf8");
+			}
+		});
 
 		fs.writeFile(outputFile, template(), {
 			encoding: "utf8",
