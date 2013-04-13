@@ -23,5 +23,13 @@
 	},
 	"dependencies": {
 		"index-format": "~1.0.0"
+	},
+	"devDependencies": {
+		"async": "~0.2.7",
+		"diff": "~1.0.4",
+		"cli-color": "~0.2.2"
+	},
+	"scripts": {
+		"test": "node test/test.js"
 	}
 }
