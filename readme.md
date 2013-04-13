@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/campersander/razorleaf.png)](https://travis-ci.org/campersander/razorleaf)
+
 Razor Leaf is a template engine for HTML. It is indentation-based and vaguely
 resembles [Jade] \(among others).
 
