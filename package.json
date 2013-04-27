@@ -1,18 +1,17 @@
 {
 	"name": "razorleaf",
-	"version": "0.13.4",
+	"version": "0.14.3-beta",
 	"main": "razorleaf.js",
 	"files": [
 		"razorleaf.js",
-		"lib/compiler.js",
-		"lib/parser.js",
-		"lib/template-utilities.js",
-		"bin/leaf"
+		"compiler.js",
+		"parser.js",
+		"utilities.js"
 	],
 	"description": "A template engine for HTML",
 	"keywords": ["template", "bulbasaur"],
 	"bin": {
-		"leaf": "bin/leaf"
+		"leaf": "cli.js"
 	},
 	"repository": {
 		"type": "git",
@@ -20,17 +19,6 @@
 	},
 	"bugs": {
 		"url": "https://github.com/campersander/razorleaf/issues"
-	},
-	"dependencies": {
-		"index-format": "~1.0.0"
-	},
-	"devDependencies": {
-		"async": "~0.2.7",
-		"diff": "~1.0.4",
-		"cli-color": "~0.2.2"
-	},
-	"scripts": {
-		"test": "node test/test.js"
 	},
 	"licenses": [
 		{

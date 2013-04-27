@@ -1,110 +1,146 @@
-[![Build Status](https://travis-ci.org/campersander/razorleaf.png)](https://travis-ci.org/campersander/razorleaf)
+Razor Leaf is a template engine for JavaScript with a convenient
+indentation-based syntax. It aims, like [Jade], to reduce the redundancy
+inherent in HTML — but with simpler rules, a sparser syntax, and a few further
+features not found in larger libraries.
 
-Razor Leaf is a template engine for HTML. It is indentation-based and vaguely
-resembles [Jade] \(among others).
+## Syntax
 
-## Example
+### Elements
+
+Elements are defined by their names only; no other special character is
+necessary.
 
 ```
-doctype
+p
+```
 
+```html
+<p></p>
+```
+
+Void elements are recognized automatically.
+
+```
+meta
+```
+
+```html
+<meta>
+```
+
+### Strings
+
+Strings are double-quoted and escaped for use in HTML as needed. Backslash
+escape codes can be used as in JavaScript. No whitespace is added
+around strings.
+
+```
+"--> A string <--\n" "A string containing \"double-quotes\""
+```
+
+```html
+--&gt;A string &lt;--
+A string containing "double-quotes"
+```
+
+Strings can also contain interpolated sections, delimited by `#{` and `}`.
+Both delimiters can be escaped with a backslash.
+
+```
+"#{6 * 7}"
+```
+
+```html
+42
+```
+
+If an exclamation mark precedes the string, it and any of its interpolated
+sections will not be escaped.
+
+```
+!"<!-- A significant comment -->"
+```
+
+```html
+<!-- A significant comment -->
+```
+
+### Attributes
+
+Attributes are marked up using the syntax <code><i>name</i>:</code>.
+An attribute name can, optionally, be followed by a string to be used as
+its value; if a value isn’t provided, the attribute is assumed to be boolean
+(and present). Note that a string used as an attributes value cannot be “raw”
+— that is, cannot be preceded by an exclamation mark.
+
+```
+meta charset: "utf-8"
+```
+
+```html
+<meta charset="utf-8">
+```
+
+### Hierarchy
+
+Hierarchy in Razor Leaf is defined using indentation. Indentation *must* use
+tabs, and not spaces. For example:
+
+```
 html
-  head
-    meta charset: 'utf-8'
+	head
+		meta charset: "utf-8"
 
-    title 'Hello, world!'
+		title "Example"
 
-    for script in data.scripts
-      script type: 'text/javascript' src: '#{script.url}'
-        if script.async
-          async:
+		link
+			rel: "stylesheet"
+			type: "text/css"
+			href: "stylesheets/example.css"
 
-    for stylesheet in data.stylesheets
-      link
-        rel: 'stylesheet'
-        type: 'text/css'
-        href: '#{stylesheet.url}'
-
-  body
-    h1 id: 'title'
-      'An example'
-
-    p id: 'content' 'This template demonstrates ' em 'most'
-      ' of Razor Leaf’s features.'
-
-    !'Literal <abbr title="HyperText Markup Language">HTML</abbr> content can be written using a string with a leading exclamation mark.'
+	body
+		p id: "introduction"
+			"This template is a brief example of hierarchy."
 ```
 
-```javascript
-var fs = require("fs");
-var razorleaf = require("razorleaf");
-var template = razorleaf.compile(fs.readFileSync("views/template.leaf", "utf8"));
-
-console.log(template(data));
+```html
+<html><head><meta charset="utf-8"><title>Example</title><link rel="stylesheet"
+type="text/css" href="stylesheets/example.css"></head><body><p
+id="introduction">This template is a brief example of hierarchy.</p></body></html>
 ```
+
+Content found after an element on the same line will also be considered that
+element’s content.
+
+### Special blocks
+
+Some names define special blocks. These are:
+
+- **`doctype`**: Inserts `<!DOCTYPE html>`.
+- **`if (condition)`**: Includes its content only if *`condition`* is met.
+- **`else`**: Can immediately follow an `if`.
+- **`for (identifier) in (collection)`**: Includes its content for each element
+  in the array or array-like object *`collection`*.
+- **`include (name)`**: Loads and includes another template.
 
 ## API
 
 ### `razorleaf.compile(template, [options])`
 
-Compiles a template and returns a function that renders the template
-and returns the result, taking an optional `data` argument usable inside
-the template.
+Compiles a template string into a function. The compiled function takes
+one argument, `data`, which can be used (under that name) in the template.
 
-**`options`** is an object containing options for compilation:
+### Options
 
-- `load`: A function that will be called to load parent and included
-  templates. It is required if either feature is used.
+- **`include(name)`**: A function that should return the template represented
+  by `name`, as given by any `include` statements in a template. This is
+  optional if template inclusion is not used.
 
-### `razorleaf.defaults`
+## leaf
 
-An object that contains the default options for use with `razorleaf.compile()`.
-These are combined with any options passed to `compile`.
-
-## Syntax
-
-There are four types of “items”.
-
-### Elements
-
-An element is defined by a name and may be followed on the same line by any
-number of attributes and strings, and up to one element. If the element is not
-inline (that is, on the same line as another element), it may followed by an
-indented block containing any number of elements, attributes, strings, and
-special blocks.
-
-### Attributes
-
-Attributes use the syntax `name: 'value'`. The value is optional, and must be a
-string if provided. If a value is not provided, the attribute is assumed to be
-boolean. Whitespace between the colon and value is required, as both attribute
-and element names may contain colons.
-
-### Strings
-
-Strings may be delimited by either single or double quotes. Any expression
-between `#{` and `}` is interpolated. When interpolating, quotes do not need to
-be escaped, but a closing brace (`}`) does. Strings’ contents are escaped as
-appropriate. Unescaped strings are marked up with a `!` before the opening
-delimiter.
-
-### Special blocks
-
-- `for (identifier) in (expression)` will evaluate `(expression)` (the
-  remainder of the line) as JavaScript and iterate over the result. `for`
-  blocks cannot directly contain attributes.
-
-- `if (expression)` will evaluate `(expression)` (the remainder of the line) as
-  JavaScript and include the block if the result is truthy (by the same rules
-  as JavaScript’s `if`). It may be followed by an `else` block.
-
-- `include (name)` will call `options.load(name)` to retrieve a subtemplate and
-  insert its contents as if to replace the `include` block.
-
-- `doctype` will insert the string `<!DOCTYPE html>`.
-
-## Upcoming features
-
-- Replaceable blocks and template extension
+`leaf` is a utility to compile static template files to HTML. It can currently
+be passed any number of paths to compile, and will write the result to an HTML
+file of the same name. (If the path ends in `.leaf`, it is replaced
+with `.html`.)
 
 [Jade]: http://jade-lang.com/

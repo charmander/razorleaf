@@ -1,3 +1,0 @@
-'#{'If you find yourself escaping quotation marks often, consider "smart quotes" as an alternative.'}'
-'\n#{'There isn\'t a use case for the interpolation of strings — but has that ever stopped anyone?'}'
-'\nStill, there remain valid motives behind escaping a single quote (\') outside of an interpolated string.'
