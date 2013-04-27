@@ -1,39 +1,31 @@
 "use strict";
 
-var compiler = require("./lib/compiler");
-var parser = require("./lib/parser");
-var __utilities = require("./lib/template-utilities");
+var parser = require("./parser");
+var compiler = require("./compiler");
 
-var defaults = {
-	load: function() {
-		throw new Error("load callback must be specified to include subtemplates.");
-	}
-};
-
-function combine() {
-	var combined = {};
-
-	for(var i = 0; i < arguments.length; i++) {
-		var obj = arguments[i];
-
-		for(var k in obj) {
-			if(obj.hasOwnProperty(k)) {
-				combined[k] = obj[k];
-			}
+function loadIncludes(tree, visited, options) {
+	tree.includes.forEach(function(include) {
+		if(visited.indexOf(include.template) !== -1) {
+			throw new Error("Circular inclusion: ⤷ " + visited.slice(visited.indexOf(include.template)).join(" → ") + " ⤴");
 		}
-	}
 
-	return combined;
+		var includeTree = parser.parse(options.include(include.template));
+
+		visited.push(include.template);
+		loadIncludes(includeTree, visited, options);
+		visited.pop();
+
+		include.children = includeTree.children;
+	});
 }
 
 function compile(template, options) {
-	options = combine(defaults, options);
+	var tree = parser.parse(template);
 
-	var tree = parser.parse(template, options);
-	var code = compiler.compile(tree);
+	loadIncludes(tree, [], options);
 
-	return eval("(function(data) {\n" + code + "\n})");
+	return compiler.compile(tree);
 }
 
 module.exports.compile = compile;
-module.exports.defaults = defaults;
+module.exports.utilties = compiler.utilties;

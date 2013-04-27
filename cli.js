@@ -4,7 +4,7 @@
 
 var fs = require("fs");
 var path = require("path");
-var razorleaf = require("../razorleaf");
+var razorleaf = require("./razorleaf");
 
 for(var i = 2; i < process.argv.length; i++) {
 	var file = process.argv[i];
