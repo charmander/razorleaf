@@ -13,6 +13,10 @@
 	"bin": {
 		"leaf": "cli.js"
 	},
+	"devDependencies": {
+		"optimist": "~0.4.0",
+		"cli-color": "~0.2.2"
+	},
 	"repository": {
 		"type": "git",
 		"url": "git://github.com/campersander/razorleaf"
