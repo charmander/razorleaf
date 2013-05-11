@@ -3,7 +3,8 @@
 var push = Array.prototype.push;
 var utilities = require("./utilities");
 
-var IDENTIFIER = /[\w-]/;
+var IDENTIFIER_CHARACTER = /[\w-]/;
+var JS_IDENTIFIER_CHARACTER = /\w/; // Others are not included for simplicity’s sake.
 
 function escapeStringLiteral(string) {
 	var result = "";
@@ -138,7 +139,7 @@ var states = {
 			return states.string;
 		}
 
-		if(IDENTIFIER.test(c)) {
+		if(IDENTIFIER_CHARACTER.test(c)) {
 			this.context = {
 				name: c,
 				parent: this.context,
@@ -225,13 +226,13 @@ var states = {
 	},
 	identifier: function(c) {
 		if(c === ":") {
-			if(!IDENTIFIER.test(this.peek())) {
+			if(!IDENTIFIER_CHARACTER.test(this.peek())) {
 				this.context.type = "attribute";
 				this.context.value = null;
 
 				return states.attributeValue;
 			}
-		} else if(!IDENTIFIER.test(c)) {
+		} else if(!IDENTIFIER_CHARACTER.test(c)) {
 			this.context.type = "element";
 			this.context.children = [];
 
@@ -415,8 +416,6 @@ specialBlocks.else = {
 	}
 };
 
-var JS_IDENTIFIER = /\w/; // Others are not included for simplicity’s sake.
-
 specialBlocks.for = {
 	begin: function() {
 		this.context.type = "for";
@@ -432,7 +431,7 @@ specialBlocks.for = {
 		return whitespace;
 	},
 	variableName: function variableName(c) {
-		if(!JS_IDENTIFIER.test(c)) {
+		if(!JS_IDENTIFIER_CHARACTER.test(c)) {
 			if(!this.context.variableName) {
 				throw this.error("Expected variable name");
 			}
@@ -500,3 +499,4 @@ specialBlocks.include = {
 };
 
 module.exports.parse = parse;
+module.exports.specialBlocks = specialBlocks;
