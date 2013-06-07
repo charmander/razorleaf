@@ -1,6 +1,6 @@
 {
 	"name": "razorleaf",
-	"version": "0.14.4-beta",
+	"version": "0.14.5-beta",
 	"main": "razorleaf.js",
 	"files": [
 		"razorleaf.js",
@@ -15,7 +15,7 @@
 		"leaf": "cli.js"
 	},
 	"devDependencies": {
-		"optimist": "~0.4.0",
+		"optimist": "~0.5.2",
 		"cli-color": "~0.2.2"
 	},
 	"repository": {
