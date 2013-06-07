@@ -19,7 +19,7 @@ for(var i = 2; i < process.argv.length; i++) {
 		var outputFile = path.join(directory, path.basename(file, ".leaf") + ".html");
 
 		var template = razorleaf.compile(content, {
-			load: function(name) {
+			include: function(name) {
 				return fs.readFileSync(path.join(directory, name + ".leaf"), "utf8");
 			}
 		});
