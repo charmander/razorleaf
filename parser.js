@@ -475,7 +475,7 @@ specialBlocks.include = {
 
 		this.context.children = {
 			push: function() {
-				throw parser.error("doctype element cannot have content");
+				throw parser.error("include element cannot have content");
 			}
 		};
 
