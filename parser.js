@@ -291,6 +291,8 @@ function parse(template) {
 		type: "root",
 		children: [],
 		includes: [],
+		extends: null,
+		blocks: {},
 		indent: -1
 	};
 
@@ -498,5 +500,67 @@ specialBlocks.include = {
 	}
 };
 
+specialBlocks.block = {
+	begin: function() {
+		var replacesNonExistentError = this.error("Block {block} does not exist in a parent template").message;
+
+		this.context.type = "block";
+		this.context.name = "";
+		this.context.replacesNonExistentBlock = function() {
+			return new SyntaxError(replacesNonExistentError.replace("{block}", this.name));
+		};
+	},
+	initialState: function whitespace(c) {
+		if(c !== " ") {
+			return this.pass(specialBlocks.block.name);
+		}
+
+		return whitespace;
+	},
+	name: function name(c) {
+		if(c === "\n") {
+			// TODO: Warn that duplicating block names within the same template serves no purpose.
+			this.root.blocks[this.context.name] = this.context;
+			return this.pass(states.content);
+		}
+
+		this.context.name += c;
+		return name;
+	}
+};
+
+specialBlocks.extends = {
+	begin: function() {
+		this.context.type = "extends";
+
+		if(this.root.extends !== null) {
+			throw this.error("A template cannot extend more than one template");
+		}
+
+		if(this.root.children.length !== 1) {
+			throw this.error("extends must appear at the beginning of a template");
+		}
+
+		this.root.extends = "";
+		delete this.context.name;
+	},
+	initialState: function whitespace(c) {
+		if(c !== " ") {
+			return this.pass(specialBlocks.extends.template);
+		}
+
+		return whitespace;
+	},
+	template: function template(c) {
+		if(c === "\n") {
+			return this.pass(states.content);
+		}
+
+		this.root.extends += c;
+		return template;
+	}
+};
+
 module.exports.parse = parse;
+module.exports.states = states;
 module.exports.specialBlocks = specialBlocks;

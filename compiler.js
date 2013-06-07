@@ -216,6 +216,23 @@ nodeHandlers.include = function(node, context) {
 	};
 };
 
+nodeHandlers.block = function(node, context) {
+	return {
+		attributes: context.attributes,
+		content: context.content,
+		scope: context.scope,
+		parent: context,
+		done: function() {}
+	};
+};
+
+nodeHandlers.extends = function(node, context) {
+	return {
+		parent: context,
+		done: function() {}
+	};
+};
+
 nodeHandlers.if = function(node, context) {
 	var conditionName = context.scope.createName("condition");
 
