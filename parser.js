@@ -333,7 +333,7 @@ function parse(template) {
 			var location = " at line " + line + ", character " + (i - lineStart + 1) + ".";
 
 			return function(message) {
-				return message + location;
+				return new SyntaxError(message + location);
 			};
 		},
 		beginLine: function() {
