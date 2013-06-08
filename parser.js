@@ -120,7 +120,8 @@ var states = {
 				content: new InterpolatedString("escapeContent"),
 				current: "",
 				parent: this.context,
-				unterminated: this.error("Expected end of string before end of input, starting")
+				unterminated: this.error("Expected end of string before end of input, starting"),
+				unexpected: this.error("A string here is not valid")
 			};
 			this.context.parent.children.push(this.context);
 			return states.string;
@@ -133,7 +134,8 @@ var states = {
 				content: new InterpolatedString(null),
 				current: "",
 				parent: this.context,
-				unterminated: this.error("Expected end of string before end of input, starting")
+				unterminated: this.error("Expected end of string before end of input, starting"),
+				unexpected: this.error("A string here is not valid")
 			};
 			this.context.parent.children.push(this.context);
 			return states.string;
@@ -237,6 +239,7 @@ var states = {
 		} else if(!IDENTIFIER_CHARACTER.test(c)) {
 			this.context.type = "element";
 			this.context.children = [];
+			this.context.unexpected = this.context.unexpected("An element here is not valid");
 
 			if(specialBlocks.hasOwnProperty(this.context.name)) {
 				var specialBlock = specialBlocks[this.context.name];

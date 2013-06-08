@@ -21,6 +21,14 @@ function loadExtends(tree, visited, options) {
 			throw new Error("Circular extension: ⤷ " + visited.slice(visited.indexOf(tree.extends)).join(" → ") + " ⤴");
 		}
 
+		for(var i = 0; i < tree.children.length; i++) {
+			var child = tree.children[i];
+
+			if(child.type !== "extends" && child.type !== "block") {
+				throw child.unexpected;
+			}
+		}
+
 		var extendTree = parser.parse(options.include(tree.extends));
 
 		visited.push(tree.extends);
