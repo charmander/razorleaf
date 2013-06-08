@@ -132,6 +132,10 @@ var nodeHandlers = {
 		context.content.addInterpolated(node.content.code);
 	},
 	attribute: function(node, context) {
+		if(!context.attributes) {
+			throw node.unexpected;
+		}
+
 		context.attributes.addText(" " + node.name);
 
 		if(node.value !== null) {

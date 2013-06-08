@@ -143,7 +143,8 @@ var states = {
 			this.context = {
 				name: c,
 				parent: this.context,
-				indent: this.indent
+				indent: this.indent,
+				unexpected: this.prepareError()
 			};
 			this.context.parent.children.push(this.context);
 			return states.identifier;
@@ -229,6 +230,7 @@ var states = {
 			if(!IDENTIFIER_CHARACTER.test(this.peek())) {
 				this.context.type = "attribute";
 				this.context.value = null;
+				this.context.unexpected = this.context.unexpected("An attribute here is not valid");
 
 				return states.attributeValue;
 			}
@@ -326,6 +328,13 @@ function parse(template) {
 			var details = message + " at line " + line + ", character " + (i - lineStart + 1) + ".";
 
 			return new SyntaxError(details);
+		},
+		prepareError: function() {
+			var location = " at line " + line + ", character " + (i - lineStart + 1) + ".";
+
+			return function(message) {
+				return message + location;
+			};
 		},
 		beginLine: function() {
 			line++;
@@ -502,16 +511,16 @@ specialBlocks.include = {
 
 specialBlocks.block = {
 	begin: function() {
-		var replacesNonExistentError = this.error("Block {block} does not exist in a parent template").message;
-
 		this.context.type = "block";
 		this.context.name = "";
-		this.context.replacesNonExistentBlock = function() {
-			return new SyntaxError(replacesNonExistentError.replace("{block}", this.name));
-		};
 	},
 	initialState: function whitespace(c) {
 		if(c !== " ") {
+			var replacesNonExistentError = this.prepareError();
+			this.context.replacesNonExistentBlock = function() {
+				return replacesNonExistentError("Block " + this.name + " does not exist in a parent template");
+			};
+
 			return this.pass(specialBlocks.block.name);
 		}
 
