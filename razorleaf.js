@@ -3,6 +3,18 @@
 var parser = require("./parser");
 var compiler = require("./compiler");
 
+function isContained(element) {
+	while(element.parent) {
+		element = element.parent;
+
+		if(element.type === "block") {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 function loadExtends(tree, visited, options) {
 	if(tree.extends) {
 		if(visited.indexOf(tree.extends) !== -1) {
@@ -20,11 +32,13 @@ function loadExtends(tree, visited, options) {
 			if(tree.blocks.hasOwnProperty(name)) {
 				var parentBlock = newTree.blocks[name];
 
-				if(!parentBlock) {
+				if(parentBlock) {
+					parentBlock.children = [tree.blocks[name]];
+				} else if(!isContained(tree.blocks[name])) {
 					throw tree.blocks[name].replacesNonExistentBlock();
 				}
 
-				parentBlock.children = [tree.blocks[name]];
+				newTree.blocks[name] = tree.blocks[name];
 			}
 		}
 
