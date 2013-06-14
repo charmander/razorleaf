@@ -83,4 +83,4 @@ function compile(template, options) {
 }
 
 module.exports.compile = compile;
-module.exports.utilties = compiler.utilties;
+module.exports.utilities = compiler.utilities;
