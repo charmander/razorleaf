@@ -1,6 +1,6 @@
 {
 	"name": "razorleaf",
-	"version": "0.15.3-beta",
+	"version": "1.0.0",
 	"main": "razorleaf.js",
 	"files": [
 		"razorleaf.js",
