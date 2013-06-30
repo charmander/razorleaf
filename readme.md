@@ -41,7 +41,7 @@ around strings.
 ```
 
 ```html
---&gt;A string &lt;--
+--&gt; A string &lt;--
 A string containing "double-quotes"
 ```
 
