@@ -156,6 +156,7 @@ var states = {
 	},
 	indent: function(c) {
 		if(c === "\n") {
+			this.indent = 0;
 			return states.indent;
 		}
 
