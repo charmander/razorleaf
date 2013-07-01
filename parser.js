@@ -114,6 +114,10 @@ var states = {
 			return states.indent;
 		}
 
+		if(c === "#") {
+			return states.comment;
+		}
+
 		if(c === "\"") {
 			this.context = {
 				type: "string",
@@ -153,6 +157,14 @@ var states = {
 		}
 
 		throw this.error("Unexpected " + c);
+	},
+	comment: function(c) {
+		if(c === "\n") {
+			this.indent = 0;
+			return states.indent;
+		}
+
+		return states.comment;
 	},
 	indent: function(c) {
 		if(c === "\n") {

@@ -114,6 +114,11 @@ id="introduction">This template is a brief example of hierarchy.</p></body></htm
 Content found after an element on the same line will also be considered that
 element’s content.
 
+### Comments
+
+Comments begin with `#` and continue to the end of the line. They do not affect
+the rendered HTML.
+
 ### Special blocks
 
 Some names define special blocks. These are:
