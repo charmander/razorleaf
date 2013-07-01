@@ -6,7 +6,7 @@ var fs = require("fs");
 var path = require("path");
 var razorleaf = require("./razorleaf");
 
-function render(input, outputFile, directory, callback) {
+function render(input, output, directory, callback) {
 	var buffers = [];
 
 	input.on("error", callback);
