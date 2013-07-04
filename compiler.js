@@ -105,6 +105,10 @@ var voidTags = [
 var nodeHandlers = {
 	root: function() {},
 	element: function(node, context) {
+		if(!context.content) {
+			throw node.unexpected;
+		}
+
 		var isVoid = voidTags.indexOf(node.name) !== -1;
 
 		return {
@@ -114,21 +118,25 @@ var nodeHandlers = {
 					value: "<" + node.name
 				}
 			]),
-			content: new OutputBuffer(),
+			content: isVoid ? null : new OutputBuffer(),
 			scope: context.scope,
 			parent: context,
 			done: function() {
 				this.parent.content.addBuffer(this.attributes);
 				this.parent.content.addText(">");
-				this.parent.content.addBuffer(this.content);
 
 				if(!isVoid) {
+					this.parent.content.addBuffer(this.content);
 					this.parent.content.addText("</" + node.name + ">");
 				}
 			}
 		};
 	},
 	string: function(node, context) {
+		if(!context.content) {
+			throw node.unexpected;
+		}
+
 		context.content.addInterpolated(node.content.code);
 	},
 	attribute: function(node, context) {
