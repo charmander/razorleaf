@@ -119,6 +119,28 @@ element’s content.
 Comments begin with `#` and continue to the end of the line. They do not affect
 the rendered HTML.
 
+### Code
+
+Code blocks begin with `%` and continue to the end of the line.
+Code blocks may contain content (strings, elements, other code blocks,
+and special blocks, but not attributes); if they do, they are treated as blocks
+and wrapped in curly braces.
+
+For example, this template:
+
+```
+% if(i < 5)
+	!"#{i}"
+```
+
+might compile to this JavaScript:
+
+```javascript
+if(i < 5) {
+    __output += i;
+}
+```
+
 ### Special blocks
 
 Some names define special blocks. These are:

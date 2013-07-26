@@ -118,6 +118,19 @@ var states = {
 			return states.comment;
 		}
 
+		if(c === "%") {
+			this.context = {
+				type: "code",
+				code: "",
+				parent: this.context,
+				indent: this.indent,
+				children: [],
+				unexpected: this.error("Code here is not valid")
+			};
+			this.context.parent.children.push(this.context);
+			return states.code;
+		}
+
 		if(c === "\"") {
 			this.context = {
 				type: "string",
@@ -157,6 +170,16 @@ var states = {
 		}
 
 		throw this.error("Unexpected " + c);
+	},
+	code: function(c) {
+		if(c === "\n") {
+			this.indent = 0;
+			return states.indent;
+		}
+
+		this.context.code += c;
+
+		return states.code;
 	},
 	comment: function(c) {
 		if(c === "\n") {

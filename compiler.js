@@ -151,6 +151,25 @@ var nodeHandlers = {
 			context.attributes.addInterpolated(node.value.content.code);
 			context.attributes.addText("\"");
 		}
+	},
+	code: function(node, context) {
+		return {
+			content: new OutputBuffer(),
+			scope: context.scope,
+			parent: context,
+			done: function() {
+				this.parent.content.addCode(node.code.trimLeft() + "\n");
+
+				if(this.content.parts.length !== 0) {
+					this.parent.content.addCode("{");
+					this.parent.content.addBuffer(this.content);
+					this.parent.content.addCode("}\n");
+				} else {
+					this.parent.content.addCode(";");
+					this.parent.content.addBuffer(this.content);
+				}
+			}
+		};
 	}
 };
 
