@@ -2,7 +2,6 @@
 
 var fs = require("fs");
 var path = require("path");
-var colour = require("cli-color");
 var optimist = require("optimist")
 	.usage("Run Razor Leaf’s tests.\nUsage: $0 [options] [tests]")
 	.options("benchmark", {
@@ -35,12 +34,12 @@ function runTest(name) {
 	var result = test.expected(error, output);
 
 	if(result) {
-		console.log(colour.red("✘") + " %s failed: %s", name, result);
+		console.log("\x1b[31m✘\x1b[0m %s failed: %s", name, result);
 		console.log("  (Got " + (error ? "error: " + error : "output: " + output) + ")");
 		return false;
 	}
 
-	console.log(colour.green("✔") + " %s passed", name);
+	console.log("\x1b[32m✔\x1b[0m %s passed", name);
 	return true;
 }
 
