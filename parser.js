@@ -1,105 +1,9 @@
 "use strict";
 
-var push = Array.prototype.push;
 var utilities = require("./utilities");
 
 var IDENTIFIER_CHARACTER = /[\w-]/;
 var JS_IDENTIFIER_CHARACTER = /\w/; // Others are not included for simplicity’s sake.
-
-function escapeStringLiteral(string) {
-	var result = "";
-	var escaped = false;
-
-	for(var i = 0; i < string.length; i++) {
-		var c = string.charAt(i);
-
-		if(escaped) {
-			escaped = false;
-			result += c;
-		} else if(c === "\\") {
-			escaped = true;
-			result += c;
-		} else if(c === "\n") {
-			result += "\\n";
-		} else if(c === "\r") {
-			result += "\\r";
-		} else if(c === "\u2028") {
-			result += "\\u2028";
-		} else if(c === "\u2029") {
-			result += "\\u2029";
-		} else if(c === "'") {
-			result += "\\'";
-		} else {
-			result += c;
-		}
-	}
-
-	return result;
-}
-
-function InterpolatedString(escapeFunction) {
-	this.parts = [];
-	this.escapeFunction = escapeFunction;
-}
-
-InterpolatedString.prototype.addText = function(text) {
-	this.parts.push({
-		type: "text",
-		value: text
-	});
-};
-
-InterpolatedString.prototype.addCode = function(code) {
-	this.parts.push({
-		type: "code",
-		value: code
-	});
-};
-
-InterpolatedString.prototype.addBuffer = function(buffer) {
-	push.apply(this.parts, buffer.parts);
-};
-
-Object.defineProperty(InterpolatedString.prototype, "code", {
-	get: function() {
-		var isCode = false;
-		var code = "";
-
-		for(var i = 0; i < this.parts.length; i++) {
-			var part = this.parts[i];
-
-			if(part.type === "code") {
-				if(!isCode) {
-					code += "' + ";
-					isCode = true;
-				}
-
-				if(this.escapeFunction) {
-					code += "__util." + this.escapeFunction + "((" + part.value + "\n)) + ";
-				} else {
-					code += "(" + part.value + "\n) + ";
-				}
-			} else {
-				if(isCode) {
-					code += "'";
-					isCode = false;
-				}
-
-				if(this.escapeFunction) {
-					code += escapeStringLiteral(utilities[this.escapeFunction](part.value));
-				} else {
-					code += escapeStringLiteral(part.value);
-				}
-			}
-		}
-
-		if(isCode) {
-			code += "'";
-		}
-
-		return code;
-	}
-});
 
 var specialBlocks = {};
 
@@ -134,7 +38,7 @@ var states = {
 		if(c === "\"") {
 			this.context = {
 				type: "string",
-				content: new InterpolatedString("escapeContent"),
+				content: new utilities.CodeContext("escapeContent"),
 				current: "",
 				parent: this.context,
 				unterminated: this.error("Expected end of string before end of input, starting"),
@@ -148,7 +52,7 @@ var states = {
 			this.skip();
 			this.context = {
 				type: "string",
-				content: new InterpolatedString(null),
+				content: new utilities.CodeContext(null),
 				current: "",
 				parent: this.context,
 				unterminated: this.error("Expected end of string before end of input, starting"),
@@ -255,7 +159,7 @@ var states = {
 				return states.interpolation;
 			}
 		} else if(c === "}") {
-			this.context.parent.content.addCode(this.context.value);
+			this.context.parent.content.addExpression(this.context.value);
 			this.context = this.context.parent;
 			return states.string;
 		}
@@ -305,7 +209,7 @@ var states = {
 
 			attribute.value = this.context = {
 				type: "string",
-				content: new InterpolatedString("escapeAttributeValue"),
+				content: new utilities.CodeContext("escapeAttributeValue"),
 				current: "",
 				parent: attribute.parent,
 				unterminated: this.error("Expected end of string before end of input, starting")

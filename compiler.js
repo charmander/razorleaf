@@ -1,6 +1,5 @@
 "use strict";
 
-var push = Array.prototype.push;
 var utilities = require("./utilities");
 
 function Scope() {
@@ -35,68 +34,6 @@ Object.defineProperty(Scope.prototype, "code", {
 	enumerable: true
 });
 
-function OutputBuffer(parts) {
-	this.parts = parts || [];
-}
-
-OutputBuffer.prototype.addText = function(text) {
-	this.parts.push({
-		type: "text",
-		value: text
-	});
-};
-
-OutputBuffer.prototype.addCode = function(code) {
-	this.parts.push({
-		type: "code",
-		value: code
-	});
-};
-
-OutputBuffer.prototype.addInterpolated = function(code) {
-	this.parts.push({
-		type: "interpolated",
-		value: code
-	});
-};
-
-OutputBuffer.prototype.addBuffer = function(buffer) {
-	push.apply(this.parts, buffer.parts);
-};
-
-Object.defineProperty(OutputBuffer.prototype, "code", {
-	get: function() {
-		var isCode = true;
-		var code = "";
-
-		for(var i = 0; i < this.parts.length; i++) {
-			var part = this.parts[i];
-
-			if(part.type === "code") {
-				if(!isCode) {
-					code += "';\n";
-					isCode = true;
-				}
-
-				code += part.value;
-			} else {
-				if(isCode) {
-					code += "\n__output += '";
-					isCode = false;
-				}
-
-				code += part.type === "interpolated" ? part.value : part.value.replace(/'/g, "\\'");
-			}
-		}
-
-		if(!isCode) {
-			code += "';\n";
-		}
-
-		return code;
-	}
-});
-
 var voidTags = [
 	"area", "base", "br", "col", "command", "embed", "hr", "img", "input",
 	"keygen", "link", "meta", "param", "source", "track", "wbr"
@@ -112,21 +49,21 @@ var nodeHandlers = {
 		var isVoid = voidTags.indexOf(node.name) !== -1;
 
 		return {
-			attributes: new OutputBuffer([
+			attributes: new utilities.CodeContext(null, [
 				{
 					type: "text",
 					value: "<" + node.name
 				}
 			]),
-			content: isVoid ? null : new OutputBuffer(),
+			content: isVoid ? null : new utilities.CodeContext(null),
 			scope: context.scope,
 			parent: context,
 			done: function() {
-				this.parent.content.addBuffer(this.attributes);
+				this.parent.content.addContext(this.attributes);
 				this.parent.content.addText(">");
 
 				if(!isVoid) {
-					this.parent.content.addBuffer(this.content);
+					this.parent.content.addContext(this.content);
 					this.parent.content.addText("</" + node.name + ">");
 				}
 			}
@@ -137,7 +74,7 @@ var nodeHandlers = {
 			throw node.unexpected;
 		}
 
-		context.content.addInterpolated(node.content.code);
+		context.content.addContext(node.content);
 	},
 	attribute: function(node, context) {
 		if(!context.attributes) {
@@ -148,13 +85,13 @@ var nodeHandlers = {
 
 		if(node.value !== null) {
 			context.attributes.addText("=\"");
-			context.attributes.addInterpolated(node.value.content.code);
+			context.attributes.addContext(node.value.content);
 			context.attributes.addText("\"");
 		}
 	},
 	code: function(node, context) {
 		return {
-			content: new OutputBuffer(),
+			content: new utilities.CodeContext(),
 			scope: context.scope,
 			parent: context,
 			done: function() {
@@ -162,11 +99,11 @@ var nodeHandlers = {
 
 				if(this.content.parts.length !== 0) {
 					this.parent.content.addCode("{");
-					this.parent.content.addBuffer(this.content);
+					this.parent.content.addContext(this.content);
 					this.parent.content.addCode("}\n");
 				} else {
 					this.parent.content.addCode(";");
-					this.parent.content.addBuffer(this.content);
+					this.parent.content.addContext(this.content);
 				}
 			}
 		};
@@ -206,7 +143,7 @@ function compileNode(node, context) {
 
 function compile(tree) {
 	var context = {
-		content: new OutputBuffer(),
+		content: new utilities.CodeContext(),
 		scope: new Scope(),
 		done: function() {}
 	};
@@ -268,8 +205,8 @@ nodeHandlers.if = function(node, context) {
 	var conditionName = context.scope.createName("condition");
 
 	return {
-		attributes: new OutputBuffer(),
-		content: new OutputBuffer(),
+		attributes: new utilities.CodeContext(),
+		content: new utilities.CodeContext(),
 		scope: context.scope,
 		parent: context,
 		done: function() {
@@ -277,8 +214,8 @@ nodeHandlers.if = function(node, context) {
 
 			if(node.else) {
 				elseContext = {
-					attributes: new OutputBuffer(),
-					content: new OutputBuffer(),
+					attributes: new utilities.CodeContext(),
+					content: new utilities.CodeContext(),
 					scope: context.scope,
 					parent: context
 				};
@@ -295,25 +232,25 @@ nodeHandlers.if = function(node, context) {
 			} else {
 				this.parent.attributes.addCode(conditionName + " = (" + node.condition + "\n);\n");
 				this.parent.attributes.addCode("if(" + conditionName + ") {\n");
-				this.parent.attributes.addBuffer(this.attributes);
+				this.parent.attributes.addContext(this.attributes);
 				this.parent.attributes.addCode("}\n");
 
 				if(node.else && elseContext.attributes.parts.length !== 0) {
 					this.parent.attributes.addCode("else {\n");
-					this.parent.attributes.addBuffer(elseContext.attributes);
+					this.parent.attributes.addContext(elseContext.attributes);
 					this.parent.attributes.addCode("}\n");
 				}
 			}
 
 			if(this.content.parts.length !== 0) {
 				this.parent.content.addCode("if(" + conditionName + ") {\n");
-				this.parent.content.addBuffer(this.content);
+				this.parent.content.addContext(this.content);
 				this.parent.content.addCode("}\n");
 			}
 
 			if(node.else && elseContext.content.parts.length !== 0) {
 				this.parent.content.addCode("else {\n");
-				this.parent.content.addBuffer(elseContext.content);
+				this.parent.content.addContext(elseContext.content);
 				this.parent.content.addCode("}\n");
 			}
 
@@ -327,13 +264,13 @@ nodeHandlers.for = function(node, context) {
 	var collectionName = context.scope.createName("collection");
 
 	if(context.scope.used[node.variableName]) {
-		throw new SyntaxError("Name " + node.variableName + " is in use in a containing scope.");
+		throw new SyntaxError("Name " + node.variableName + " is in use in a containing scope."); // TODO: Rename variable (requires esprima and escodegen as dependencies) or use a wrapping function (slower).
 	}
 
 	context.scope.used[node.variableName] = true;
 
 	return {
-		content: new OutputBuffer(),
+		content: new utilities.CodeContext(),
 		scope: context.scope,
 		parent: context,
 		done: function() {
@@ -342,7 +279,7 @@ nodeHandlers.for = function(node, context) {
 				"for(" + indexName + " = 0; " + indexName + " < " + collectionName + ".length; " + indexName + "++) {\n" +
 				node.variableName + " = " + collectionName + "[" + indexName + "];\n"
 			);
-			this.parent.content.addBuffer(this.content);
+			this.parent.content.addContext(this.content);
 			this.parent.content.addCode("}\n");
 
 			this.scope.used[node.variableName] = false;
