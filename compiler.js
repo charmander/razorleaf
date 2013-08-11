@@ -259,6 +259,17 @@ nodeHandlers.if = function(node, context) {
 	};
 };
 
+nodeHandlers.else = function(node, context) {
+	// The parser has already taken care of it.
+	return {
+		content: new utilities.CodeContext(),
+		attributes: new utilities.CodeContext(),
+		scope: context.scope,
+		parent: context,
+		done: function() {}
+	};
+};
+
 nodeHandlers.for = function(node, context) {
 	var indexName = context.scope.createName("index");
 	var collectionName = context.scope.createName("collection");

@@ -353,11 +353,11 @@ specialBlocks.if = {
 
 specialBlocks.else = {
 	begin: function() {
-		this.context.parent.children.splice(-1, 1);
+		this.context.parent.children.pop();
 
-		var previous = this.context.parent.children[this.context.parent.children.length - 1];
+		var previous = this.context.parent.children[this.context.parent.children.length - 2];
 
-		if(previous.type !== "if") {
+		if(!previous || previous.type !== "if" || previous.else) {
 			throw this.error("Unexpected else");
 		}
 
