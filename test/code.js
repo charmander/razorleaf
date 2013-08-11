@@ -6,11 +6,6 @@ var test = {
 		if(output !== "20") {
 			return "Expected code blocks with content to become blocks without output in between";
 		}
-	},
-	options: {
-		include: function(name) {
-			return includes[name];
-		}
 	}
 };
 
