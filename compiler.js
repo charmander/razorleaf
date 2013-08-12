@@ -204,6 +204,18 @@ nodeHandlers.extends = function(node, context) {
 nodeHandlers.if = function(node, context) {
 	var conditionName = context.scope.createName("condition");
 
+	if(node.elif.length > 0) {
+		node.else = {
+			children: [{
+				type: "if",
+				condition: node.elif[0].condition,
+				children: node.elif[0].children,
+				elif: node.elif.slice(1),
+				else: node.else
+			}]
+		};
+	}
+
 	return {
 		attributes: new utilities.CodeContext(),
 		content: new utilities.CodeContext(),

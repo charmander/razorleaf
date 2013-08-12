@@ -147,7 +147,8 @@ Some names define special blocks. These are:
 
 - **`doctype`**: Inserts `<!DOCTYPE html>`.
 - **`if (condition)`**: Includes its content only if *`condition`* is met.
-- **`else`**: Can immediately follow an `if`.
+- **`elif (condition)`**: Can immediately follow an `if` or an `elif`.
+- **`else`**: Can immediately follow an `if` or an `elif`.
 - **`for (identifier) in (collection)`**: Includes its content for each element
   in the array or array-like object *`collection`*.
 - **`include (name)`**: Loads and includes another template.

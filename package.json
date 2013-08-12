@@ -1,6 +1,6 @@
 {
 	"name": "razorleaf",
-	"version": "1.4.2",
+	"version": "1.5.0",
 	"main": "razorleaf.js",
 	"files": [
 		"razorleaf.js",

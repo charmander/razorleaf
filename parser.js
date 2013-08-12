@@ -331,6 +331,7 @@ specialBlocks.if = {
 	begin: function() {
 		this.context.type = "if";
 		this.context.condition = "";
+		this.context.elif = [];
 
 		delete this.context.name;
 	},
@@ -351,11 +352,43 @@ specialBlocks.if = {
 	}
 };
 
+specialBlocks.elif = {
+	begin: function() {
+		this.context.parent.children.pop();
+		this.context.type = "elif";
+		this.context.condition = "";
+		delete this.context.name;
+
+		var previous = this.context.parent.children[this.context.parent.children.length - 1];
+
+		if(!previous || previous.type !== "if" || previous.else) {
+			throw this.error("Unexpected elif");
+		}
+
+		previous.elif.push(this.context);
+	},
+	initialState: function whitespace(c) {
+		if(c !== " ") {
+			return this.pass(specialBlocks.elif.condition);
+		}
+
+		return whitespace;
+	},
+	condition: function condition(c) {
+		if(c === "\n") {
+			return this.pass(states.content);
+		}
+
+		this.context.condition += c;
+		return condition;
+	}
+};
+
 specialBlocks.else = {
 	begin: function() {
 		this.context.parent.children.pop();
 
-		var previous = this.context.parent.children[this.context.parent.children.length - 2];
+		var previous = this.context.parent.children[this.context.parent.children.length - 1];
 
 		if(!previous || previous.type !== "if" || previous.else) {
 			throw this.error("Unexpected else");
