@@ -242,7 +242,7 @@ nodeHandlers.if = function(node, context) {
 				}
 			}
 
-			if(this.content.parts.length !== 0) {
+			if(this.content.parts.length !== 0 || node.else) {
 				this.parent.content.addCode("if(" + conditionName + ") {\n");
 				this.parent.content.addContext(this.content);
 				this.parent.content.addCode("}\n");
