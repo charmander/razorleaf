@@ -2,23 +2,9 @@
 
 var fs = require("fs");
 var path = require("path");
-var optimist = require("optimist")
-	.usage("Run Razor Leaf’s tests.\nUsage: $0 [options] [tests]")
-	.options("benchmark", {
-		describe: "Run benchmarks as well as tests.",
-		boolean: true,
-		default: true
-	})
-	.describe("no-benchmark");
 var razorleaf = require("./");
 
 var testPath = path.join(__dirname, "test");
-var argv = optimist.argv;
-
-if(argv.help) {
-	optimist.showHelp();
-	process.exit();
-}
 
 function runTest(name) {
 	var test = require(path.join(testPath, name));
@@ -43,7 +29,7 @@ function runTest(name) {
 	return true;
 }
 
-var tests = argv._.length === 0 ? fs.readdirSync(testPath) : argv._;
+var tests = process.argv.length > 2 ? process.argv.slice(2) : fs.readdirSync(testPath);
 
 var allPassed = tests.reduce(function(allPassed, test) {
 	var result = runTest(test);

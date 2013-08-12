@@ -1,6 +1,6 @@
 {
 	"name": "razorleaf",
-	"version": "1.5.0",
+	"version": "1.5.1",
 	"main": "razorleaf.js",
 	"files": [
 		"razorleaf.js",
@@ -13,9 +13,6 @@
 	"keywords": ["template", "bulbasaur"],
 	"bin": {
 		"leaf": "cli.js"
-	},
-	"devDependencies": {
-		"optimist": "~0.6.0"
 	},
 	"repository": {
 		"type": "git",
