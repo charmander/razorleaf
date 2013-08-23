@@ -20,19 +20,15 @@ Scope.prototype.createName = function(prefix) {
 	return name;
 };
 
-Object.defineProperty(Scope.prototype, "code", {
-	get: function() {
-		var names = Object.keys(this.used);
+Scope.prototype.generateCode = function() {
+	var names = Object.keys(this.used);
 
-		if(names.length === 0) {
-			return "";
-		}
+	if(names.length === 0) {
+		return "";
+	}
 
-		return "var " + names.join(", ") + ";";
-	},
-	configurable: true,
-	enumerable: true
-});
+	return "var " + names.join(", ") + ";";
+};
 
 var voidTags = [
 	"area", "base", "br", "col", "command", "embed", "hr", "img", "input",
@@ -152,13 +148,21 @@ function compile(tree) {
 
 	compileNode(tree, context);
 
-	var compiled = new Function(
-		"__util, data",
-		context.scope.code +
-		"\n__output = '';\n" +
-		context.content.code +
-		"\nreturn __output;"
-	);
+	var staticContent = context.content.generateStatic();
+
+	if(staticContent !== null) {
+		return function() {
+			return staticContent;
+		};
+	}
+
+	var functionBody =
+		context.scope.generateCode() +
+		"\n__output = '" +
+		context.content.generateCode("text") +
+		"\nreturn __output;";
+
+	var compiled = new Function("__util, data", functionBody);
 
 	return function(data) {
 		return compiled(utilities, data);
@@ -268,17 +272,6 @@ nodeHandlers.if = function(node, context) {
 
 			this.scope.used[conditionName] = false;
 		}
-	};
-};
-
-nodeHandlers.else = function(node, context) {
-	// The parser has already taken care of it.
-	return {
-		content: new utilities.CodeContext(),
-		attributes: new utilities.CodeContext(),
-		scope: context.scope,
-		parent: context,
-		done: function() {}
 	};
 };
 

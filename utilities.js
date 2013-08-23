@@ -75,68 +75,80 @@ CodeContext.prototype.addContext = function(context) {
 	push.apply(this.parts, context.parts);
 };
 
-Object.defineProperty(CodeContext.prototype, "code", {
-	get: function() {
-		var current = "code";
-		var generated = "";
+CodeContext.prototype.generateStatic = function() {
+	var isStatic = function(part) {
+		return part.type === "text";
+	};
 
-		for(var i = 0; i < this.parts.length; i++) {
-			var part = this.parts[i];
-
-			switch(part.type) {
-			case "code":
-				if(current === "text") {
-					generated += "';\n";
-				} else if(current === "expression") {
-					generated += ";\n";
-				}
-
-				generated += part.value;
-				current = "code";
-
-				break;
-			case "text":
-				if(current === "code") {
-					generated += "__output += '";
-				} else if(current === "expression") {
-					generated += " + '";
-				}
-
-				generated += escapeStringLiteral(part.value);
-				current = "text";
-
-				break;
-			case "expression":
-				if(current === "code") {
-					generated += "__output += ";
-				} else if(current === "text") {
-					generated += "' + ";
-				} else {
-					generated += " + ";
-				}
-
-				if(part.escapeFunction) {
-					generated += "__util." + part.escapeFunction + "((" + part.value + "))";
-				} else {
-					generated += "(" + part.value + ")";
-				}
-
-				current = "expression";
-
-				break;
-			default:
-				throw new Error("Unknown part type");
-			}
-		}
-
-		if(current === "text") {
-			generated += "';";
-		} else if(current === "expression") {
-			generated += ";";
-		}
-
-		return generated;
+	if(!this.parts.every(isStatic)) {
+		return null;
 	}
-});
+
+	return this.parts.map(function(part) {
+		return part.value;
+	}).join("");
+};
+
+CodeContext.prototype.generateCode = function(initial) {
+	var current = initial || "code";
+	var generated = "";
+
+	for(var i = 0; i < this.parts.length; i++) {
+		var part = this.parts[i];
+
+		switch(part.type) {
+		case "code":
+			if(current === "text") {
+				generated += "';\n";
+			} else if(current === "expression") {
+				generated += ";\n";
+			}
+
+			generated += part.value;
+			current = "code";
+
+			break;
+		case "text":
+			if(current === "code") {
+				generated += "__output += '";
+			} else if(current === "expression") {
+				generated += " + '";
+			}
+
+			generated += escapeStringLiteral(part.value);
+			current = "text";
+
+			break;
+		case "expression":
+			if(current === "code") {
+				generated += "__output += ";
+			} else if(current === "text") {
+				generated += "' + ";
+			} else {
+				generated += " + ";
+			}
+
+			if(part.escapeFunction) {
+				generated += "__util." + part.escapeFunction + "((" + part.value + "))";
+			} else {
+				generated += "(" + part.value + ")";
+			}
+
+			current = "expression";
+
+			break;
+		default:
+			throw new Error("Unknown part type");
+		}
+	}
+
+	if(current === "text") {
+		generated += "';";
+	} else if(current === "expression") {
+		generated += ";";
+	}
+
+	return generated;
+};
 
 module.exports = utilities;
