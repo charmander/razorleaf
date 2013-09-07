@@ -21,7 +21,7 @@ function runTest(name) {
 
 	if(result) {
 		console.log("\x1b[31m✘\x1b[0m %s failed: %s", name, result);
-		console.log("  (Got " + (error ? "error: " + error : "output: " + output) + ")");
+		console.log("  (Got " + (error ? "error: " + error.stack : "output: " + output) + ")");
 		return false;
 	}
 
