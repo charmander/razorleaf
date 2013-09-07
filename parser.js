@@ -5,6 +5,14 @@ var utilities = require("./utilities");
 var IDENTIFIER_CHARACTER = /[\w-]/;
 var JS_IDENTIFIER_CHARACTER = /\w/; // Others are not included for simplicity’s sake.
 
+function addBlockAction(tree, blockName, action) {
+	if(tree.blockActions.hasOwnProperty(blockName)) {
+		tree.blockActions[blockName].push(action);
+	} else {
+		tree.blockActions[blockName] = [action];
+	}
+}
+
 var specialBlocks = {};
 
 var states = {
@@ -238,6 +246,7 @@ function parse(template) {
 		includes: [],
 		extends: null,
 		blocks: {},
+		blockActions: {},
 		indent: -1
 	};
 
@@ -492,9 +501,9 @@ specialBlocks.block = {
 	},
 	initialState: function whitespace(c) {
 		if(c !== " ") {
-			var replacesNonExistentError = this.prepareError();
-			this.context.replacesNonExistentBlock = function() {
-				return replacesNonExistentError("Block " + this.name + " does not exist in a parent template");
+			var duplicatesExistingNameError = this.prepareError();
+			this.context.duplicatesExistingName = function() {
+				return duplicatesExistingNameError("A block named “" + this.name + "” already exists in this context");
 			};
 
 			return this.pass(specialBlocks.block.name);
@@ -504,8 +513,45 @@ specialBlocks.block = {
 	},
 	name: function name(c) {
 		if(c === "\n") {
-			// TODO: Warn that duplicating block names within the same template serves no purpose.
+			if(this.root.blocks.hasOwnProperty(this.context.name)) {
+				throw this.context.duplicatesExistingName();
+			}
+
 			this.root.blocks[this.context.name] = this.context;
+			return this.pass(states.content);
+		}
+
+		this.context.name += c;
+		return name;
+	}
+};
+
+specialBlocks.replace = {
+	begin: function() {
+		this.context.parent.children.pop();
+		this.context.type = "replace-block";
+		this.context.name = "";
+	},
+	initialState: function whitespace(c) {
+		if(c !== " ") {
+			var replacesNonExistentError = this.prepareError();
+			this.context.replacesNonExistentBlock = function() {
+				return replacesNonExistentError("Block " + this.name + " does not exist in a parent template");
+			};
+
+			return this.pass(specialBlocks.replace.name);
+		}
+
+		return whitespace;
+	},
+	name: function name(c) {
+		var replaceBlock = this.context;
+
+		if(c === "\n") {
+			addBlockAction(this.root, replaceBlock.name, function(block) {
+				block.children = replaceBlock.children;
+			});
+
 			return this.pass(states.content);
 		}
 

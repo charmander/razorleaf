@@ -5,7 +5,7 @@ var includes = {
 };
 
 var test = {
-	template: "extends b\nblock example\n\t\"Correct\"",
+	template: "extends b\nreplace example\n\t\"Correct\"",
 	expected: function(error, output) {
 		if(output !== "Correct") {
 			return "Expected child block to replace parent block";

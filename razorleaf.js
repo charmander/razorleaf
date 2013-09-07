@@ -24,7 +24,7 @@ function loadExtends(tree, visited, options) {
 		for(var i = 0; i < tree.children.length; i++) {
 			var child = tree.children[i];
 
-			if(child.type !== "extends" && child.type !== "block") {
+			if(child.type !== "extends" && child.type !== "replace-block") {
 				throw child.unexpected;
 			}
 		}
@@ -38,15 +38,21 @@ function loadExtends(tree, visited, options) {
 
 		for(var name in tree.blocks) {
 			if(tree.blocks.hasOwnProperty(name)) {
-				var parentBlock = newTree.blocks[name];
-
-				if(parentBlock) {
-					parentBlock.children = [tree.blocks[name]];
-				} else if(!isContained(tree.blocks[name])) {
-					throw tree.blocks[name].replacesNonExistentBlock();
+				if(newTree.blocks.hasOwnProperty(name)) {
+					throw tree.blocks[name].duplicatesExistingName();
 				}
 
 				newTree.blocks[name] = tree.blocks[name];
+			}
+		}
+
+		for(var name in newTree.blocks) {
+			if(tree.blockActions.hasOwnProperty(name)) {
+				var block = newTree.blocks[name];
+
+				tree.blockActions[name].forEach(function(action) {
+					action(block);
+				});
 			}
 		}
 
@@ -78,6 +84,16 @@ function compile(template, options) {
 
 	tree = loadExtends(tree, [], options);
 	loadIncludes(tree, [], options);
+
+	for(var name in tree.blocks) {
+		if(tree.blockActions.hasOwnProperty(name)) {
+			var block = tree.blocks[name];
+
+			tree.blockActions[name].forEach(function(action) {
+				action(block);
+			});
+		}
+	}
 
 	return compiler.compile(tree);
 }

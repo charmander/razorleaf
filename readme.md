@@ -152,11 +152,11 @@ Some names define special blocks. These are:
 - **`for (identifier) in (collection)`**: Includes its content for each element
   in the array or array-like object *`collection`*.
 - **`include (name)`**: Loads and includes another template.
-- **`extends (name)`**: Loads another template and replaces any blocks
-  with names matching blocks in the current template with those blocks.
-  `extends` must appear at the beginning of the template. A template that
-  extends another template cannot have any content outside of blocks.
-- **`block (name)`**: Defines a replaceable block, to be used with `extend`.
+- **`extends (name)`**: Loads another template and replaces its blocks.
+  A template that extends another template cannot have any content
+  outside of block actions.
+- **`block (name)`**: Defines a replaceable block.
+- **`replace (name)`**: Replaces a block.
 
 ## API
 
