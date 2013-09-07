@@ -98,7 +98,6 @@ var nodeHandlers = {
 					this.parent.content.addContext(this.content);
 					this.parent.content.addCode("}\n");
 				} else {
-					this.parent.content.addCode(";");
 					this.parent.content.addContext(this.content);
 				}
 			}
