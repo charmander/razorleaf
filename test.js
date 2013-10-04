@@ -31,11 +31,7 @@ function runTest(name) {
 
 var tests = process.argv.length > 2 ? process.argv.slice(2) : fs.readdirSync(testPath);
 
-var allPassed = tests.reduce(function(allPassed, test) {
-	var result = runTest(test);
-
-	return allPassed && result;
-}, true);
+var allPassed = tests.every(runTest);
 
 if(!allPassed) {
 	process.exit(1);
