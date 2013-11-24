@@ -1,38 +1,33 @@
 "use strict";
 
-var fs = require("fs");
-var path = require("path");
 var razorleaf = require("./");
 
-var testPath = path.join(__dirname, "test");
+var tests = [
+	{
+		name: "escaping",
+		template: '"println!(\\"Hello, world\\")"',
+		expected: { output: 'println!("Hello, world!")' }
+	}
+];
 
-function runTest(name) {
-	var test = require(path.join(testPath, name));
-	var output;
-	var error;
+function passes(test) {
+	var output, error, errorMessage;
 
 	try {
 		output = razorleaf.compile(test.template, test.options)(test.data);
-	} catch(e) {
+	} catch (e) {
 		error = e;
+		errorMessage = e.message;
 	}
 
-	var result = test.expected(error, output);
-
-	if(result) {
-		console.log("\x1b[31m✘\x1b[0m %s failed: %s", name, result);
-		console.log("  (Got " + (error ? "error: " + error.stack : "output: " + output) + ")");
-		return false;
+	if (errorMessage === test.expected.error && output === test.expected.output) {
+		console.log("\x1b[32m✔\x1b[0m \x1b[1m%s\x1b[0m passed", test.name);
+		return true;
 	}
 
-	console.log("\x1b[32m✔\x1b[0m %s passed", name);
-	return true;
+	console.log("\x1b[31m✘\x1b[0m \x1b[1m%s\x1b[0m failed", test.name);
+	console.log(error ? "  " + error.stack : "  Output: " + output);
+	return false;
 }
 
-var tests = process.argv.length > 2 ? process.argv.slice(2) : fs.readdirSync(testPath);
-
-var allPassed = tests.every(runTest);
-
-if(!allPassed) {
-	process.exit(1);
-}
+process.exit(!tests.every(passes));
