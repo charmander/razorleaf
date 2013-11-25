@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/charmander/razorleaf.png)](https://travis-ci.org/charmander/razorleaf)
+![Status](https://charmander.me/razorleaf/status.svg)
 
 Razor Leaf is a template engine for JavaScript with a convenient
 indentation-based syntax. It aims to reduce the redundancy inherent in HTML
