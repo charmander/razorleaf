@@ -1,9 +1,9 @@
 [![Build Status](https://travis-ci.org/charmander/razorleaf.png)](https://travis-ci.org/charmander/razorleaf)
 
 Razor Leaf is a template engine for JavaScript with a convenient
-indentation-based syntax. It aims, like [Jade], to reduce the redundancy
-inherent in HTML — but with simpler rules, a sparser syntax, and a few further
-features not found in larger libraries.
+indentation-based syntax. It aims to reduce the redundancy inherent in HTML
+with simple rules, a sparse syntax, and a few further features not found
+in larger libraries.
 
 ## Syntax
 
@@ -170,12 +170,3 @@ one argument, `data`, which can be used (under that name) in the template.
 - **`include(name)`**: A function that should return the template represented
   by `name`, as given by any `include` statements in a template. This is
   optional if template inclusion is not used.
-
-## leaf
-
-`leaf` is a utility to compile static template files to HTML. It can currently
-be passed any number of paths to compile, and will write the result to an HTML
-file of the same name. (If the path ends in `.leaf`, it is replaced
-with `.html`.)
-
-[Jade]: http://jade-lang.com/

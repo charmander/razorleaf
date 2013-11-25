@@ -6,14 +6,10 @@
 		"razorleaf.js",
 		"compiler.js",
 		"parser.js",
-		"utilities.js",
-		"cli.js"
+		"utilities.js"
 	],
 	"description": "A template engine for HTML",
 	"keywords": ["template", "bulbasaur"],
-	"bin": {
-		"leaf": "cli.js"
-	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/charmander/razorleaf"
@@ -22,10 +18,5 @@
 		"url": "https://github.com/charmander/razorleaf/issues"
 	},
 	"homepage": "https://charmander.me/razorleaf/",
-	"licenses": [
-		{
-			"type": "CC0",
-			"url": "https://creativecommons.org/publicdomain/zero/1.0/"
-		}
-	]
+	"license": "MIT"
 }
