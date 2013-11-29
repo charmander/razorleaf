@@ -1,597 +1,934 @@
 "use strict";
 
 var utilities = require("./utilities");
+var CodeBlock = utilities.CodeBlock;
 
-var IDENTIFIER_CHARACTER = /[\w-]/;
-var JS_IDENTIFIER_CHARACTER = /\w/; // Others are not included for simplicity’s sake.
+var HEX = /[\da-fA-F]/;
+var DIGIT = /\d/;
+var IDENTIFIER = /[\w-]/;
+var RECOGNIZABLE = /[!-~]/;
+var POSSIBLE_COMMENT = /\/\/|<!--/;
+var BLOCK_OR_TEMPLATE_NAME = /\S/;
+var JS_IDENTIFIER = /\w/;
 
-function addBlockAction(tree, blockName, action) {
-	if(tree.blockActions.hasOwnProperty(blockName)) {
-		tree.blockActions[blockName].push(action);
-	} else {
-		tree.blockActions[blockName] = [action];
+var singleCharEscapes = {
+	"\\": "\\\\",
+	n: "\n",
+	r: "\r",
+	t: "\t",
+	v: "\v",
+	f: "\f",
+	b: "\b",
+	0: "\0"
+};
+
+function isExpression(js) {
+	try {
+		new Function("'use strict'; (" + js + "\n)");
+		return true;
+	} catch (e) {
+		return false;
 	}
 }
 
-var specialBlocks = {};
+function describe(c) {
+	if (RECOGNIZABLE.test(c)) {
+		return c;
+	}
+
+	return require("./unicode")[c.charCodeAt(0)] || JSON.stringify(c);
+}
 
 var states = {
-	content: function(c) {
-		if(c === " ") {
+	indent: function(parser, c) {
+		if (c === null && parser.indentString) {
+			parser.warn("Trailing whitespace");
+			return;
+		}
+
+		if (c === "\n") {
+			if (parser.indentString) {
+				parser.warn("Whitespace-only line");
+			}
+
+			parser.indentString = "";
+			return states.indent;
+		}
+
+		if (c === "\t") {
+			if (parser.indentType && parser.indentType.indentCharacter !== "\t") {
+				throw parser.error("Unexpected tab indent; indent was already determined to be " + parser.indentType.name + " by line " + parser.indentType.determined.line + ", character " + parser.indentType.determined.character);
+			}
+		} else if (c !== " ") {
+			if (!parser.indentString) {
+				parser.indent = 0;
+			} else if (parser.indentType) {
+				if (parser.indentType.indentCharacter === "\t") {
+					var i = parser.indentString.indexOf(" ");
+					parser.indent = i === -1 ? parser.indentString.length : i;
+				} else {
+					var level = parser.indentString.length / parser.indentType.spaces;
+
+					if (level !== (level | 0)) {
+						throw parser.error("Invalid indent level " + level + "; indent was determined to be " + parser.indentType.name + " by line " + parser.indentType.determined.line + ", character " + parser.indentType.determined.character);
+					}
+
+					parser.indent = level;
+				}
+			} else {
+				parser.indent = 1;
+
+				if (parser.indentString.charAt(0) === "\t") {
+					parser.indentType = {
+						indentCharacter: "\t",
+						name: "one tab"
+					};
+				} else {
+					parser.indentType = {
+						indentCharacter: " ",
+						name: parser.indentString.length + " space" + (parser.indentString.length === 1 ? "" : "s"),
+						spaces: parser.indentString.length
+					};
+				}
+
+				parser.indentType.determined = {
+					line: parser.position.line,
+					character: parser.position.character
+				};
+			}
+
+			if (parser.indent > parser.context.indent + 1) {
+				throw parser.error("Excessive indent " + parser.indent + "; expected " + (parser.context.indent + 1) + " or smaller");
+			}
+
+			while (parser.context.indent >= parser.indent) {
+				parser.context = parser.context.parent;
+			}
+
+			return states.content(parser, c);
+		}
+
+		parser.indentString += c;
+		return states.indent;
+	},
+	content: function(parser, c) {
+		if (c === null) {
+			return;
+		}
+
+		if (parser.context.type === "attribute") {
+			if (c === "!") {
+				throw parser.error("Attributes cannot have raw strings for values");
+			}
+
+			if (c !== " " && c !== '"') {
+				parser.context = parser.context.parent;
+			}
+		}
+
+		if (c === "\n") {
+			parser.indentString = "";
+			return states.indent;
+		}
+
+		if (c === " ") {
 			return states.content;
 		}
 
-		if(c === "\n") {
-			this.indent = 0;
-			return states.indent;
+		if (c === ".") {
+			parser.identifier = "";
+			return states.className;
 		}
 
-		if(c === "#") {
+		if (c === "!") {
+			parser.string = new CodeBlock();
+			parser.escapeFunction = null;
+			return states.rawString;
+		}
+
+		if (c === '"') {
+			parser.string = new CodeBlock();
+			parser.escapeFunction = parser.context.type === "attribute" ? "escapeAttributeValue" : "escapeContent";
+			return states.string;
+		}
+
+		if (c === "#") {
 			return states.comment;
 		}
 
-		if(c === "%") {
-			this.context = {
-				type: "code",
-				code: "",
-				parent: this.context,
-				indent: this.indent,
-				children: [],
-				unexpected: this.error("Code here is not valid")
-			};
-			this.context.parent.children.push(this.context);
+		if (c === "%") {
+			parser.code = "";
 			return states.code;
 		}
 
-		if(c === "\"") {
-			this.context = {
-				type: "string",
-				content: new utilities.CodeContext("escapeContent"),
-				current: "",
-				parent: this.context,
-				unterminated: this.error("Expected end of string before end of input, starting"),
-				unexpected: this.error("A string here is not valid")
-			};
-			this.context.parent.children.push(this.context);
-			return states.string;
+		if (IDENTIFIER.test(c)) {
+			parser.identifier = "";
+			return states.identifier(parser, c);
 		}
 
-		if(c === "!" && this.peek() === "\"") {
-			this.skip();
-			this.context = {
-				type: "string",
-				content: new utilities.CodeContext(null),
-				current: "",
-				parent: this.context,
-				unterminated: this.error("Expected end of string before end of input, starting"),
-				unexpected: this.error("A string here is not valid")
-			};
-			this.context.parent.children.push(this.context);
-			return states.string;
-		}
-
-		if(IDENTIFIER_CHARACTER.test(c)) {
-			this.context = {
-				name: c,
-				parent: this.context,
-				indent: this.indent,
-				unexpected: this.prepareError()
-			};
-			this.context.parent.children.push(this.context);
-			return states.identifier;
-		}
-
-		throw this.error("Unexpected " + c);
+		throw parser.error("Unexpected " + describe(c));
 	},
-	code: function(c) {
-		if(c === "\n") {
-			this.indent = 0;
-			return states.indent;
-		}
-
-		this.context.code += c;
-
-		return states.code;
-	},
-	comment: function(c) {
-		if(c === "\n") {
-			this.indent = 0;
-			return states.indent;
+	comment: function(parser, c) {
+		if (c === null || c === "\n") {
+			return states.content(parser, c);
 		}
 
 		return states.comment;
 	},
-	indent: function(c) {
-		if(c === "\n") {
-			this.indent = 0;
-			return states.indent;
+	code: function(parser, c) {
+		if (c === null || c === "\n") {
+			parser.context = {
+				type: "code",
+				code: parser.code.trim(),
+				parent: parser.context,
+				children: [],
+				indent: parser.indent,
+				position: {
+					line: parser.position.line,
+					character: parser.position.character
+				}
+			};
+
+			parser.context.parent.children.push(parser.context);
+
+			return states.content(parser, c);
 		}
 
-		if(c !== "\t") {
-			while(this.indent <= this.context.indent) {
-				this.context = this.context.parent;
-			}
-
-			if(this.indent > this.context.indent + 1) {
-				throw this.error("Excessive indent");
-			}
-
-			return this.pass(states.content);
-		}
-
-		this.indent++;
-		return states.indent;
+		parser.code += c;
+		return states.code;
 	},
-	string: function(c) {
-		if(c === "\"") {
-			if(this.context.current) {
-				this.context.content.addText(this.context.current);
+	identifier: function(parser, c) {
+		if (c === ":") {
+			return states.possibleAttribute;
+		}
+
+		if (c !== null && IDENTIFIER.test(c)) {
+			parser.identifier += c;
+			return states.identifier;
+		}
+
+		if (keywords.hasOwnProperty(parser.identifier)) {
+			return keywords[parser.identifier](parser, c);
+		}
+
+		parser.context = {
+			type: "element",
+			name: parser.identifier,
+			parent: parser.context,
+			children: [],
+			indent: parser.indent,
+			position: {
+				line: parser.position.line,
+				character: parser.position.character
+			}
+		};
+
+		parser.context.parent.children.push(parser.context);
+
+		return states.content(parser, c);
+	},
+	className: function(parser, c) {
+		if (c !== null && IDENTIFIER.test(c)) {
+			parser.identifier += c;
+			return states.className;
+		}
+
+		if (!parser.identifier) {
+			throw parser.error("Expected class name");
+		}
+
+		parser.context.children.push({
+			type: "class",
+			value: parser.identifier,
+			parent: parser.context,
+			position: {
+				line: parser.position.line,
+				character: parser.position.character
+			}
+		});
+
+		return states.content(parser, c);
+	},
+	possibleAttribute: function(parser, c) {
+		if (c !== null && IDENTIFIER.test(c)) {
+			parser.identifier += ":" + c;
+			return states.identifier;
+		}
+
+		if (c === ":") {
+			parser.identifier += ":";
+			return states.possibleAttribute;
+		}
+
+		parser.context = {
+			type: "attribute",
+			name: parser.identifier,
+			value: null,
+			parent: parser.context,
+			position: {
+				line: parser.position.line,
+				character: parser.position.character
+			}
+		};
+
+		parser.context.parent.children.push(parser.context);
+
+		return states.content;
+	},
+	rawString: function(parser, c) {
+		if (c !== '"') {
+			throw parser.error("Expected beginning quote of raw string, not " + describe(c));
+		}
+
+		return states.string;
+	},
+	string: function(parser, c) {
+		if (c === null) {
+			throw parser.error("Expected end of string before end of file");
+		}
+
+		if (c === '"') {
+			var string = {
+				type: "string",
+				value: parser.string,
+				parent: parser.context,
+				position: {
+					line: parser.position.line,
+					character: parser.position.character
+				}
+			};
+
+			if (parser.context.type === "attribute") {
+				parser.context.value = string;
+				parser.context = parser.context.parent;
+			} else {
+				parser.context.children.push(string);
 			}
 
-			this.context = this.context.parent;
 			return states.content;
 		}
 
-		if(c === "\\") {
-			this.context.current += c;
-			return states.escaped;
+		if (c === "#") {
+			return states.stringPound;
 		}
 
-		if(c === "#" && this.peek() === "{") {
-			if(this.context.current) {
-				this.context.content.addText(this.context.current);
-				this.context.current = "";
-			}
-			this.context = {
-				type: "interpolation",
-				value: "",
-				parent: this.context,
-				unterminated: this.error("Expected end of interpolated section before end of input, starting")
-			};
-			this.skip();
+		if (c === "\\") {
+			return states.escape;
+		}
+
+		if (parser.escapeFunction) {
+			parser.string.addText(utilities[parser.escapeFunction](c));
+		} else {
+			parser.string.addText(c);
+		}
+
+		return states.string;
+	},
+	stringPound: function(parser, c) {
+		if (c === "{") {
+			parser.interpolation = "";
 			return states.interpolation;
 		}
 
-		this.context.current += c;
-		return states.string;
+		parser.string.addText("#");
+		return states.string(parser, c);
 	},
-	escaped: function(c) {
-		this.context.current += c;
-		return states.string;
-	},
-	interpolation: function(c) {
-		if(c === "\\") {
-			if(this.peek() === "}") {
-				this.skip();
-				this.context.value += "}";
-				return states.interpolation;
-			}
-		} else if(c === "}") {
-			this.context.parent.content.addExpression(this.context.value);
-			this.context = this.context.parent;
+	interpolation: function(parser, c) {
+		if (c === null) {
+			throw parser.error("Interpolated section never resolves to a valid JavaScript expression"); // TODO: Where did it start?
+		}
+
+		if (c === "}" && isExpression(parser.interpolation)) {
+			var interpolation = POSSIBLE_COMMENT.test(parser.interpolation) ? parser.interpolation + "\n" : parser.interpolation;
+			parser.string.addExpression(parser.escapeFunction, interpolation);
 			return states.string;
 		}
 
-		this.context.value += c;
+		parser.interpolation += c;
 		return states.interpolation;
 	},
-	identifier: function(c) {
-		if(c === ":") {
-			if(!IDENTIFIER_CHARACTER.test(this.peek())) {
-				this.context.type = "attribute";
-				this.context.value = null;
-				this.context.unexpected = this.context.unexpected("An attribute here is not valid");
-
-				return states.attributeValue;
-			}
-		} else if(!IDENTIFIER_CHARACTER.test(c)) {
-			this.context.type = "element";
-			this.context.children = [];
-			this.context.unexpected = this.context.unexpected("An element here is not valid");
-
-			if(specialBlocks.hasOwnProperty(this.context.name)) {
-				var specialBlock = specialBlocks[this.context.name];
-
-				specialBlock.begin.call(this);
-
-				return this.pass(specialBlock.initialState);
-			}
-
-			return this.pass(states.content);
+	escape: function(parser, c) {
+		if (c === null) {
+			throw parser.error("Expected escape character");
 		}
 
-		this.context.name += c;
-		return states.identifier;
-	},
-	attributeValue: function(c) {
-		if(c === " ") {
-			return states.attributeValue;
-		}
-
-		if(c === "!") {
-			throw this.error("Attributes cannot have raw strings as values");
-		}
-
-		if(c === "\"") {
-			var attribute = this.context;
-
-			attribute.value = this.context = {
-				type: "string",
-				content: new utilities.CodeContext("escapeAttributeValue"),
-				current: "",
-				parent: attribute.parent,
-				unterminated: this.error("Expected end of string before end of input, starting")
-			};
-
+		if (c === "#" || c === '"') {
+			parser.string.addText(c);
 			return states.string;
 		}
 
-		this.context = this.context.parent;
+		if (c === "x") {
+			return states.escapeX1;
+		}
 
-		return this.pass(states.content);
+		if (c === "u") {
+			return states.escapeU1;
+		}
+
+		if (singleCharEscapes.hasOwnProperty(c)) {
+			parser.string.addText(singleCharEscapes[c]);
+			return states.string;
+		}
+
+		// TODO: Allow LineTerminator to be escaped?
+
+		return states.string(parser, c);
+	},
+	escapeX1: function(parser, c) {
+		if (c === null || !HEX.test(c)) {
+			throw parser.error("Expected hexadecimal digit");
+		}
+
+		parser.charCode = parseInt(c, 16) << 4;
+		return states.escapeX2;
+	},
+	escapeX2: function(parser, c) {
+		if (c === null || !HEX.test(c)) {
+			throw parser.error("Expected hexadecimal digit");
+		}
+
+		var escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
+
+		if (parser.escapeFunction) {
+			parser.string.addText(utilities[parser.escapeFunction](escapedCharacter));
+		} else {
+			parser.string.addText(escapedCharacter);
+		}
+
+		return states.string;
+	},
+	escapeU1: function(parser, c) {
+		if (c === null || !HEX.test(c)) {
+			throw parser.error("Expected hexadecimal digit");
+		}
+
+		parser.charCode = parseInt(c, 16) << 12;
+		return states.escapeU2;
+	},
+	escapeU2: function(parser, c) {
+		if (c === null || !HEX.test(c)) {
+			throw parser.error("Expected hexadecimal digit");
+		}
+
+		parser.charCode |= parseInt(c, 16) << 8;
+		return states.escapeU3;
+	},
+	escapeU3: function(parser, c) {
+		if (c === null || !HEX.test(c)) {
+			throw parser.error("Expected hexadecimal digit");
+		}
+
+		parser.charCode |= parseInt(c, 16) << 4;
+		return states.escapeU4;
+	},
+	escapeU4: function(parser, c) {
+		if (c === null || !HEX.test(c)) {
+			throw parser.error("Expected hexadecimal digit");
+		}
+
+		var escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
+
+		if (parser.escapeFunction) {
+			parser.string.addText(utilities[parser.escapeFunction](escapedCharacter));
+		} else {
+			parser.string.addText(escapedCharacter);
+		}
+
+		return states.string;
 	}
 };
 
-function parse(template) {
-	var i;
-	var c;
-	var state = states.content;
+var keywords = {
+	doctype: function(parser, c) {
+		parser.context.children.push({
+			type: "string",
+			value: new CodeBlock().addText("<!DOCTYPE html>"),
+			parent: parser.context,
+			position: {
+				line: parser.position.line,
+				character: parser.position.character
+			}
+		});
 
-	var line = 1;
-	var lineStart = 0;
+		return states.content(parser, c);
+	},
+	include: function(parser, c) {
+		var leadingWhitespace = function(parser, c) {
+			if (c === " ") {
+				return leadingWhitespace;
+			}
+
+			if (c !== null && BLOCK_OR_TEMPLATE_NAME.test(c)) {
+				parser.identifier = "";
+				return identifier(parser, c);
+			}
+
+			throw parser.error("Expected name of included template, not " + describe(c));
+		};
+
+		var identifier = function(parser, c) {
+			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
+				parser.context.children.push({
+					type: "include",
+					template: parser.identifier,
+					parent: parser.context,
+					position: {
+						line: parser.position.line,
+						character: parser.position.character
+					}
+				});
+
+				return states.content(parser, c);
+			}
+
+			parser.identifier += c;
+			return identifier;
+		};
+
+		return leadingWhitespace(parser, c);
+	},
+	extends: function(parser, c) {
+		if (parser.root.children.length || parser.root.extends) {
+			throw parser.error("extends must appear first in a template");
+		}
+
+		parser.root.children = {
+			push: function() {
+				throw parser.error("A template that extends another can only contain block actions directly");
+			}
+		};
+
+		parser.root.blockActions = {};
+
+		var leadingWhitespace = function(parser, c) {
+			if (c === " ") {
+				return leadingWhitespace;
+			}
+
+			if (c !== null && BLOCK_OR_TEMPLATE_NAME.test(c)) {
+				parser.identifier = "";
+				return identifier(parser, c);
+			}
+
+			throw parser.error("Expected name of parent template, not " + describe(c));
+		};
+
+		var identifier = function(parser, c) {
+			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
+				parser.root.extends = parser.identifier;
+
+				return states.content(parser, c);
+			}
+
+			parser.identifier += c;
+			return identifier;
+		};
+
+		return leadingWhitespace(parser, c);
+	},
+	block: function(parser, c) {
+		var leadingWhitespace = function(parser, c) {
+			if (c === " ") {
+				return leadingWhitespace;
+			}
+
+			if (c !== null && BLOCK_OR_TEMPLATE_NAME.test(c)) {
+				parser.identifier = "";
+				return identifier(parser, c);
+			}
+
+			throw parser.error("Expected name of block, not " + describe(c));
+		};
+
+		var identifier = function(parser, c) {
+			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
+				if (parser.root.blocks.hasOwnProperty(parser.identifier)) {
+					throw parser.error("A block named “" + parser.identifier + "” has already been defined");
+				}
+
+				parser.context = {
+					type: "block",
+					name: parser.identifier,
+					parent: parser.context,
+					children: [],
+					indent: parser.indent
+				};
+
+				parser.context.parent.children.push(parser.context);
+				parser.root.blocks[parser.identifier] = parser.context;
+
+				return states.content(parser, c);
+			}
+
+			parser.identifier += c;
+			return identifier;
+		};
+
+		return leadingWhitespace(parser, c);
+	},
+	replace: function(parser, c) {
+		var leadingWhitespace = function(parser, c) {
+			if (c === " ") {
+				return leadingWhitespace;
+			}
+
+			if (c !== null && BLOCK_OR_TEMPLATE_NAME.test(c)) {
+				parser.identifier = "";
+				return identifier(parser, c);
+			}
+
+			throw parser.error("Expected name of block to replace, not " + describe(c));
+		};
+
+		var identifier = function(parser, c) {
+			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
+				var newBlock = {
+					type: "block",
+					name: parser.identifier,
+					parent: parser.context,
+					children: [],
+					indent: parser.indent
+				};
+
+				var action = function(block) {
+					block.children = newBlock.children;
+				};
+
+				if (parser.root.blockActions.hasOwnProperty(parser.identifier)) {
+					parser.root.blockActions[parser.identifier].push(action);
+				} else {
+					parser.root.blockActions[parser.identifier] = [action];
+				}
+
+				parser.context = newBlock;
+
+				return states.content(parser, c);
+			}
+
+			parser.identifier += c;
+			return identifier;
+		};
+
+		return leadingWhitespace(parser, c);
+	},
+	if: function(parser, c) {
+		var condition_ = "";
+
+		var leadingWhitespace = function(parser, c) {
+			if (c === " ") {
+				return leadingWhitespace;
+			}
+
+			if (c === null) {
+				throw parser.error("Expected condition, not end of file");
+			}
+
+			return condition(parser, c);
+		};
+
+		var condition = function(parser, c) {
+			if (c === null || c === "\n") {
+				parser.context = {
+					type: "if",
+					condition: condition_,
+					elif: [],
+					else: null,
+					parent: parser.context,
+					children: [],
+					indent: parser.indent,
+					position: {
+						line: parser.position.line,
+						character: parser.position.character
+					}
+				};
+
+				parser.context.parent.children.push(parser.context);
+
+				return states.content(parser, c);
+			}
+
+			condition_ += c;
+			return condition;
+		};
+
+		return leadingWhitespace(parser, c);
+	},
+	elif: function(parser, c) {
+		var condition_ = "";
+
+		var previous = parser.context.children && parser.context.children[parser.context.children.length - 1];
+
+		if (!previous || previous.type !== "if" || previous.else) {
+			throw parser.error("Unexpected elif");
+		}
+
+		var leadingWhitespace = function(parser, c) {
+			if (c === " ") {
+				return leadingWhitespace;
+			}
+
+			if (c === null) {
+				throw parser.error("Expected condition, not end of file");
+			}
+
+			return condition(parser, c);
+		};
+
+		var condition = function(parser, c) {
+			if (c === null || c === "\n") {
+				var elif = {
+					type: "elif",
+					condition: condition_,
+					parent: parser.context,
+					children: [],
+					indent: parser.indent,
+					position: {
+						line: parser.position.line,
+						character: parser.position.character
+					}
+				};
+
+				previous.elif.push(elif);
+				parser.context = elif;
+
+				return states.content(parser, c);
+			}
+
+			condition_ += c;
+			return condition;
+		};
+
+		return leadingWhitespace(parser, c);
+	},
+	else: function(parser, c) {
+		var previous = parser.context.children && parser.context.children[parser.context.children.length - 1];
+
+		if (!previous || previous.type !== "if" || previous.else) {
+			throw parser.error("Unexpected else");
+		}
+
+		previous.else = {
+			type: "else",
+			parent: parser.context,
+			children: [],
+			indent: parser.indent,
+			position: {
+				line: parser.position.line,
+				character: parser.position.character
+			}
+		};
+
+		parser.context = previous.else;
+
+		return states.content(parser, c);
+	},
+	for: function(parser, c) {
+		var collection_ = "";
+
+		var leadingWhitespace = function(parser, c) {
+			if (c === " ") {
+				return leadingWhitespace;
+			}
+
+			if (c !== null && JS_IDENTIFIER.test(c)) {
+				if (DIGIT.test(c)) {
+					throw parser.error("Expected name of loop variable, not " + describe(c));
+				}
+
+				parser.identifier = "";
+				return identifier(parser, c);
+			}
+
+			throw parser.error("Expected name of loop variable, not " + describe(c));
+		};
+
+		var identifier = function(parser, c) {
+			if (c === null || (!JS_IDENTIFIER.test(c) && c !== " ")) {
+				throw parser.error("Expected in");
+			}
+
+			if (c === " ") {
+				return whitespace1;
+			}
+
+			parser.identifier += c;
+			return identifier;
+		};
+
+		var whitespace1 = function(parser, c) {
+			if (c === " ") {
+				return whitespace1;
+			}
+
+			if (c === "o") {
+				return of1;
+			}
+
+			throw parser.error("Expected of");
+		};
+
+		var of1 = function(parser, c) {
+			if (c === "f") {
+				return of2;
+			}
+
+			throw parser.error("Expected of");
+		};
+
+		var of2 = function(parser, c) {
+			if (c === null) {
+				throw parser.error("Expected loop collection expression");
+			}
+
+			if (IDENTIFIER.test(c)) {
+				throw parser.error("Expected of");
+			}
+
+			if (c === " ") {
+				return whitespace2;
+			}
+
+			return collection(parser, c);
+		};
+
+		var whitespace2 = function(parser, c) {
+			if (c === null) {
+				throw parser.error("Expected loop collection expression");
+			}
+
+			if (c === " ") {
+				return whitespace2;
+			}
+
+			return collection(parser, c);
+		};
+
+		var collection = function(parser, c) {
+			if (c === null || c === "\n") {
+				parser.context = {
+					type: "for",
+					variable: parser.identifier,
+					collection: collection_,
+					parent: parser.context,
+					children: [],
+					indent: parser.indent,
+					position: {
+						line: parser.position.line,
+						character: parser.position.character
+					}
+				};
+
+				parser.context.parent.children.push(parser.context);
+
+				return states.content(parser, c);
+			}
+
+			collection_ += c;
+			return collection;
+		};
+
+		return leadingWhitespace(parser, c);
+	}
+};
+
+function parse(template, options) {
+	var i;
+
+	var eof = false;
 
 	var root = {
 		type: "root",
 		children: [],
-		includes: [],
+		indent: -1,
 		extends: null,
-		blocks: {},
-		blockActions: {},
-		indent: -1
+		blockActions: null,
+		blocks: {}
 	};
 
-	template += "\n";
-
-	var parser = {
-		template: template,
+	var parser = Object.seal({
 		context: root,
 		root: root,
-		indent: 0,
-		pass: function(state) {
-			return state.call(parser, c);
-		},
-		peek: function(count) {
-			return count === undefined ? template.charAt(i + 1) : template.substr(i + 1, count);
-		},
-		skip: function(count) {
-			if(count === undefined) {
-				count = 1;
-			}
-
-			for(var j = 0; j < count; j++) {
-				i++;
-
-				if(template.charAt(i) === "\n") {
-					parser.beginLine();
-				}
-			}
+		indentString: "",
+		indent: null,
+		indentType: null,
+		identifier: null,
+		raw: null,
+		string: null,
+		escapeFunction: null,
+		interpolation: null,
+		charCode: null,
+		code: null,
+		position: {
+			line: 1,
+			character: 0
 		},
 		error: function(message) {
-			var details = message + " at line " + line + ", character " + (i - lineStart + 1) + ".";
-
-			return new SyntaxError(details);
+			var where = eof ? "EOF" : "line " + parser.position.line + ", character " + parser.position.character;
+			return new SyntaxError(message + " at " + where + " in " + options.name + ".");
 		},
-		prepareError: function() {
-			var location = " at line " + line + ", character " + (i - lineStart + 1) + ".";
-
-			return function(message) {
-				return new SyntaxError(message + location);
-			};
-		},
-		beginLine: function() {
-			line++;
-			lineStart = i + 1;
+		warn: function(message) {
+			if (options.debug) {
+				var where = eof ? "EOF" : "line " + parser.position.line + ", character " + parser.position.character;
+				console.warn("⚠ %s at %s in %s.", message, where, options.name);
+			}
 		}
-	};
+	});
 
-	for(i = 0; i < template.length; i++) {
-		c = template.charAt(i);
+	var state = states.indent;
 
-		if(c === "\n") {
-			parser.beginLine();
+	for (i = 0; i < template.length; i++) {
+		var c = template.charAt(i);
+
+		if (c === "\n") {
+			parser.position.line++;
+			parser.position.character = 0;
 		}
 
-		state = state.call(parser, c);
+		state = state(parser, c);
+		parser.position.character++;
 	}
 
-	switch(state) {
-	case states.indent:
-		break;
+	eof = true;
+	state(parser, null);
 
-	case states.string:
-	case states.interpolation:
-		throw parser.context.unterminated;
+	if (root.extends) {
+		var parentTemplate = options.load(root.extends);
+		var blockName;
 
-	default:
-		// If this error is thrown, an extension to the parser has most likely parsed incorrectly.
-		throw new Error("Parsing bug: expected final state to be indent.");
+		for (blockName in root.blocks) {
+			if (root.blocks.hasOwnProperty(blockName)) {
+				if (parentTemplate.blocks.hasOwnProperty(blockName)) {
+					throw new SyntaxError("Parent template " + root.extends + " already contains a block named “" + blockName + "”.");
+				}
+
+				parentTemplate.blocks[blockName] = root.blocks[blockName];
+			}
+		}
+
+		for (blockName in root.blockActions) {
+			if (root.blockActions.hasOwnProperty(blockName)) {
+				if (!parentTemplate.blocks.hasOwnProperty(blockName)) {
+					throw new SyntaxError("There is no block named “" + blockName + "”.");
+				}
+
+				var block = parentTemplate.blocks[blockName];
+				var actions = root.blockActions[blockName];
+
+				for (i = 0; i < actions.length; i++) {
+					var action = actions[i];
+
+					action(block);
+				}
+			}
+		}
+
+		return parentTemplate;
 	}
 
 	return root;
 }
 
-specialBlocks.doctype = {
-	begin: function() {
-		var parser = this;
-
-		this.context.type = "doctype";
-		delete this.context.name;
-
-		this.context.children = {
-			push: function() {
-				throw parser.error("doctype element cannot have content");
-			}
-		};
-	},
-	initialState: states.content
-};
-
-specialBlocks.if = {
-	begin: function() {
-		this.context.type = "if";
-		this.context.condition = "";
-		this.context.elif = [];
-
-		delete this.context.name;
-	},
-	initialState: function whitespace(c) {
-		if(c !== " ") {
-			return this.pass(specialBlocks.if.condition);
-		}
-
-		return whitespace;
-	},
-	condition: function condition(c) {
-		if(c === "\n") {
-			return this.pass(states.content);
-		}
-
-		this.context.condition += c;
-		return condition;
-	}
-};
-
-specialBlocks.elif = {
-	begin: function() {
-		this.context.parent.children.pop();
-		this.context.type = "elif";
-		this.context.condition = "";
-		delete this.context.name;
-
-		var previous = this.context.parent.children[this.context.parent.children.length - 1];
-
-		if(!previous || previous.type !== "if" || previous.else) {
-			throw this.error("Unexpected elif");
-		}
-
-		previous.elif.push(this.context);
-	},
-	initialState: function whitespace(c) {
-		if(c !== " ") {
-			return this.pass(specialBlocks.elif.condition);
-		}
-
-		return whitespace;
-	},
-	condition: function condition(c) {
-		if(c === "\n") {
-			return this.pass(states.content);
-		}
-
-		this.context.condition += c;
-		return condition;
-	}
-};
-
-specialBlocks.else = {
-	begin: function() {
-		this.context.parent.children.pop();
-
-		var previous = this.context.parent.children[this.context.parent.children.length - 1];
-
-		if(!previous || previous.type !== "if" || previous.else) {
-			throw this.error("Unexpected else");
-		}
-
-		previous.else = this.context;
-		this.context.type = "else";
-		delete this.context.name;
-	},
-	initialState: function() {
-		return this.pass(states.content);
-	}
-};
-
-specialBlocks.for = {
-	begin: function() {
-		this.context.type = "for";
-		this.context.variableName = "";
-		this.context.collection = "";
-		delete this.context.name;
-	},
-	initialState: function whitespace(c) {
-		if(c !== " ") {
-			return this.pass(specialBlocks.for.variableName);
-		}
-
-		return whitespace;
-	},
-	variableName: function variableName(c) {
-		if(!JS_IDENTIFIER_CHARACTER.test(c)) {
-			if(!this.context.variableName) {
-				throw this.error("Expected variable name");
-			}
-
-			if(c !== " " || this.peek(3) !== "in ") {
-				throw this.error("Expected in");
-			}
-
-			this.skip(3);
-
-			return specialBlocks.for.whitespace;
-		}
-
-		this.context.variableName += c;
-		return variableName;
-	},
-	whitespace: function whitespace(c) {
-		if(c !== " ") {
-			return this.pass(specialBlocks.for.collection);
-		}
-
-		return whitespace;
-	},
-	collection: function collection(c) {
-		if(c === "\n") {
-			return this.pass(states.content);
-		}
-
-		this.context.collection += c;
-		return collection;
-	}
-};
-
-specialBlocks.include = {
-	begin: function() {
-		var parser = this;
-
-		this.context.type = "include";
-		this.context.template = "";
-		delete this.context.name;
-
-		this.context.children = {
-			push: function() {
-				throw parser.error("include element cannot have content");
-			}
-		};
-
-		this.root.includes.push(this.context);
-	},
-	initialState: function whitespace(c) {
-		if(c !== " ") {
-			return this.pass(specialBlocks.include.template);
-		}
-
-		return whitespace;
-	},
-	template: function template(c) {
-		if(c === "\n") {
-			return this.pass(states.content);
-		}
-
-		this.context.template += c;
-		return template;
-	}
-};
-
-specialBlocks.block = {
-	begin: function() {
-		this.context.type = "block";
-		this.context.name = "";
-	},
-	initialState: function whitespace(c) {
-		if(c !== " ") {
-			var duplicatesExistingNameError = this.prepareError();
-			this.context.duplicatesExistingName = function() {
-				return duplicatesExistingNameError("A block named “" + this.name + "” already exists in this context");
-			};
-
-			return this.pass(specialBlocks.block.name);
-		}
-
-		return whitespace;
-	},
-	name: function name(c) {
-		if(c === "\n") {
-			if(this.root.blocks.hasOwnProperty(this.context.name)) {
-				throw this.context.duplicatesExistingName();
-			}
-
-			this.root.blocks[this.context.name] = this.context;
-			return this.pass(states.content);
-		}
-
-		this.context.name += c;
-		return name;
-	}
-};
-
-specialBlocks.replace = {
-	begin: function() {
-		this.context.parent.children.pop();
-		this.context.type = "replace-block";
-		this.context.name = "";
-	},
-	initialState: function whitespace(c) {
-		if(c !== " ") {
-			var replacesNonExistentError = this.prepareError();
-			this.context.replacesNonExistentBlock = function() {
-				return replacesNonExistentError("Block " + this.name + " does not exist in a parent template");
-			};
-
-			return this.pass(specialBlocks.replace.name);
-		}
-
-		return whitespace;
-	},
-	name: function name(c) {
-		var replaceBlock = this.context;
-
-		if(c === "\n") {
-			addBlockAction(this.root, replaceBlock.name, function(block) {
-				block.children = replaceBlock.children;
-			});
-
-			return this.pass(states.content);
-		}
-
-		this.context.name += c;
-		return name;
-	}
-};
-
-specialBlocks.extends = {
-	begin: function() {
-		this.context.type = "extends";
-
-		if(this.root.extends !== null) {
-			throw this.error("A template cannot extend more than one template");
-		}
-
-		if(this.root.children.length !== 1) {
-			throw this.error("extends must appear at the beginning of a template");
-		}
-
-		this.root.extends = "";
-		delete this.context.name;
-	},
-	initialState: function whitespace(c) {
-		if(c !== " ") {
-			return this.pass(specialBlocks.extends.template);
-		}
-
-		return whitespace;
-	},
-	template: function template(c) {
-		if(c === "\n") {
-			return this.pass(states.content);
-		}
-
-		this.root.extends += c;
-		return template;
-	}
-};
-
+module.exports.constructor = { name: "razorleaf.parser" };
 module.exports.parse = parse;
 module.exports.states = states;
-module.exports.specialBlocks = specialBlocks;
+module.exports.keywords = keywords;

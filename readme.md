@@ -1,4 +1,4 @@
-![Status](https://charmander.me/razorleaf/status.svg)
+![Status]
 
 Razor Leaf is a template engine for JavaScript with a convenient
 indentation-based syntax. It aims to reduce the redundancy inherent in HTML
@@ -46,7 +46,7 @@ A string containing "double-quotes"
 ```
 
 Strings can also contain interpolated sections, delimited by `#{` and `}`.
-Both delimiters can be escaped with a backslash.
+`#{` can be escaped with a leading backslash; `}` doesn’t require escaping.
 
 ```
 "#{6 * 7}"
@@ -85,8 +85,7 @@ meta charset: "utf-8"
 
 ### Hierarchy
 
-Hierarchy in Razor Leaf is defined using indentation. Indentation *must* use
-tabs, and not spaces. For example:
+Hierarchy in Razor Leaf is defined using indentation. For example:
 
 ```
 html
@@ -129,15 +128,15 @@ and wrapped in curly braces.
 For example, this template:
 
 ```
-% if(i < 5)
+% if (i < 5)
 	!"#{i}"
 ```
 
 might compile to this JavaScript:
 
 ```javascript
-if(i < 5) {
-    __output += i;
+if (i < 5) {
+	output += i;
 }
 ```
 
@@ -149,8 +148,8 @@ Some names define special blocks. These are:
 - **`if (condition)`**: Includes its content only if *`condition`* is met.
 - **`elif (condition)`**: Can immediately follow an `if` or an `elif`.
 - **`else`**: Can immediately follow an `if` or an `elif`.
-- **`for (identifier) in (collection)`**: Includes its content for each element
-  in the array or array-like object *`collection`*.
+- **`for (identifier) of (collection)`**: Includes its content for each element
+  of the array or array-like object *`collection`*.
 - **`include (name)`**: Loads and includes another template.
 - **`extends (name)`**: Loads another template and replaces its blocks.
   A template that extends another template cannot have any content
@@ -160,6 +159,15 @@ Some names define special blocks. These are:
 
 ## API
 
+### `new razorleaf.DirectoryLoader(root, [options])`
+
+Creates a loader that maps template names to files with the `.leaf` extension
+in the directory located at *`root`*.
+
+#### `razorleaf.DirectoryLoader.prototype.load(name)`
+
+Returns a template object loaded from the root directory.
+
 ### `razorleaf.compile(template, [options])`
 
 Compiles a template string into a function. The compiled function takes
@@ -167,6 +175,8 @@ one argument, `data`, which can be used (under that name) in the template.
 
 ### Options
 
-- **`include(name)`**: A function that should return the template represented
-  by `name`, as given by any `include` statements in a template. This is
-  optional if template inclusion is not used.
+- **`debug`**: If `true`, warnings will be printed. (In a later version, this will enable error rewriting.)
+- **`load(name)`**: A function that returns a parsed template represented by `name`.
+  This is filled automatically by most loaders.
+
+[Status]: https://charmander.me/razorleaf/status.svg

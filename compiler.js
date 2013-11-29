@@ -1,33 +1,41 @@
 "use strict";
 
 var utilities = require("./utilities");
+var CodeBlock = utilities.CodeBlock;
+
+var POSSIBLE_COMMENT = /\/\/|<!--/;
+
+function addPossibleConflicts(possibleConflicts, code) {
+	// It isn’t possible to refer to a local variable and create a conflict
+	// in strict mode without clearly (or nearly so) specifying the variable’s name.
+	// Since we won’t be using any name but output_*, other letter and digit
+	// characters are not a concern. As for eval – that obviously isn’t possible to work around.
+	var JS_IDENTIFIER = /(?:[a-zA-Z_]|\\u[0-9a-fA-F])(?:\w|\\u[0-9a-fA-F])*/g;
+
+	var m;
+
+	while (m = JS_IDENTIFIER.exec(code)) {
+		possibleConflicts[JSON.parse('"' + m + '"')] = true;
+	}
+}
+
+function passThrough(compiler, context, node) {
+	node.children.forEach(function(child) {
+		compileNode(compiler, context, child);
+	});
+}
 
 function Scope() {
 	this.used = {};
 }
 
-Scope.prototype.createName = function(prefix) {
-	var name;
-	var i = 1;
-
-	do {
-		name = "__" + prefix + i;
-		i++;
-	} while(this.used[name]);
-
-	this.used[name] = true;
-
-	return name;
-};
-
-Scope.prototype.generateCode = function() {
-	var names = Object.keys(this.used);
-
-	if(names.length === 0) {
-		return "";
+Scope.prototype.getName = function(name) {
+	while (this.used.hasOwnProperty(name)) {
+		name += "_";
 	}
 
-	return "var " + names.join(", ") + ";";
+	this.used[name] = true;
+	return name;
 };
 
 var voidTags = [
@@ -35,275 +43,243 @@ var voidTags = [
 	"keygen", "link", "meta", "param", "source", "track", "wbr"
 ];
 
-var nodeHandlers = {
-	root: function() {},
-	element: function(node, context) {
-		if(!context.content) {
-			throw node.unexpected;
-		}
+var transform = {
+	root: passThrough,
+	block: passThrough,
+	element: function(compiler, context, node) {
+		var name = node.name.toLowerCase();
+		var isVoid = voidTags.indexOf(name) !== -1;
 
-		var isVoid = voidTags.indexOf(node.name) !== -1;
-
-		return {
-			attributes: new utilities.CodeContext(null, [
-				{
-					type: "text",
-					value: "<" + node.name
-				}
-			]),
-			content: isVoid ? null : new utilities.CodeContext(null),
-			scope: context.scope,
-			parent: context,
-			done: function() {
-				this.parent.content.addContext(this.attributes);
-				this.parent.content.addText(">");
-
-				if(!isVoid) {
-					this.parent.content.addContext(this.content);
-					this.parent.content.addText("</" + node.name + ">");
-				}
-			}
+		var newContext = {
+			attributes: new CodeBlock().addText("<" + name),
+			content: new CodeBlock(),
+			classes: new CodeBlock()
 		};
-	},
-	string: function(node, context) {
-		if(!context.content) {
-			throw node.unexpected;
+
+		if (!isVoid) {
+			node.children.forEach(function(child) {
+				compileNode(compiler, newContext, child);
+			});
 		}
 
-		context.content.addContext(node.content);
+		context.content.addBlock(newContext.attributes);
+
+		if (newContext.classes.parts.length) {
+			context.content.addText(" class=\"");
+			context.content.addBlock(newContext.classes);
+			context.content.addText("\"");
+		}
+
+		context.content.addText(">");
+
+		context.content.addBlock(newContext.content);
+
+		if (!isVoid) {
+			context.content.addText("</" + name + ">");
+		}
 	},
-	attribute: function(node, context) {
-		if(!context.attributes) {
-			throw node.unexpected;
+	attribute: function(compiler, context, node) {
+		if (!context.attributes) {
+			throw new SyntaxError("Unexpected attribute"); // TODO: Where?
 		}
 
 		context.attributes.addText(" " + node.name);
 
-		if(node.value !== null) {
+		if (node.value) {
 			context.attributes.addText("=\"");
-			context.attributes.addContext(node.value.content);
+			context.attributes.addBlock(node.value.value);
 			context.attributes.addText("\"");
+
+			for (var i = 0; i < node.value.value.parts.length; i++) {
+				var part = node.value.value.parts[i];
+
+				if (part.type === "expression") {
+					addPossibleConflicts(compiler.possibleConflicts, part.value);
+				}
+			}
 		}
 	},
-	code: function(node, context) {
-		return {
-			content: new utilities.CodeContext(),
-			scope: context.scope,
-			parent: context,
-			done: function() {
-				this.parent.content.addCode(node.code.trimLeft() + "\n");
+	string: function(compiler, context, node) {
+		context.content.addBlock(node.value);
 
-				if(this.content.parts.length !== 0) {
-					this.parent.content.addCode("{");
-					this.parent.content.addContext(this.content);
-					this.parent.content.addCode("}\n");
-				} else {
-					this.parent.content.addContext(this.content);
-				}
+		for (var i = 0; i < node.value.parts.length; i++) {
+			var part = node.value.parts[i];
+
+			if (part.type === "expression") {
+				addPossibleConflicts(compiler.possibleConflicts, part.value);
 			}
+		}
+	},
+	class: function(compiler, context, node) {
+		if (!context.classes) {
+			throw new SyntaxError("Unexpected class"); // TODO: Where?
+		}
+
+		context.classes.addText(" " + node.value);
+	},
+	code: function(compiler, context, node) {
+		if (node.children.length) {
+			context.content.addCode(node.code + (POSSIBLE_COMMENT.test(node.code) ? "\n{" : " {"));
+
+			var newContext = {
+				content: context.content
+			};
+
+			node.children.forEach(function(child) {
+				compileNode(compiler, newContext, child);
+			});
+
+			context.content.addCode("}");
+		} else {
+			context.content.addCode(node.code + (POSSIBLE_COMMENT.test(node.code) ? "\n;" : ";"));
+		}
+
+		addPossibleConflicts(compiler.possibleConflicts, node.code);
+	},
+	include: function(compiler, context, node) {
+		var subtree = compiler.options.load(node.template);
+
+		compileNode(compiler, context, subtree);
+	},
+	if: function(compiler, context, node) {
+		var condition = POSSIBLE_COMMENT.test(node.condition) ? node.condition + "\n" : node.condition;
+
+		var newContext = {
+			content: new CodeBlock(),
+			attributes: context.attributes && new CodeBlock(),
+			classes: context.classes && new CodeBlock()
 		};
+
+		var elseContext;
+
+		node.children.forEach(function(child) {
+			compileNode(compiler, newContext, child);
+		});
+
+		if (node.elif.length) {
+			node.else = {
+				children: [
+					{
+						type: "if",
+						condition: node.elif[0].condition,
+						elif: node.elif.slice(1),
+						else: node.else,
+						children: node.elif[0].children
+					}
+				]
+			};
+		}
+
+		if (node.else) {
+			elseContext = {
+				content: new CodeBlock(),
+				attributes: context.attributes && new CodeBlock(),
+				classes: context.classes && new CodeBlock()
+			};
+
+			node.else.children.forEach(function(child) {
+				compileNode(compiler, elseContext, child);
+			});
+		}
+
+		var conditionName = compiler.scope.getName("condition");
+		(context.attributes || context.content).addCode("var " + conditionName + " = (" + condition + ");");
+		condition = conditionName;
+
+		if (newContext.attributes && newContext.attributes.parts.length) {
+			context.attributes.addCode("if (" + condition + ") {");
+			context.attributes.addBlock(newContext.attributes);
+			context.attributes.addCode("}");
+
+			if (elseContext && elseContext.attributes.parts.length) {
+				context.attributes.addCode("else {");
+				context.attributes.addBlock(elseContext.attributes);
+				context.attributes.addCode("}");
+			}
+		}
+
+		if (newContext.classes && newContext.classes.parts.length) {
+			context.classes.addCode("if (" + condition + ") {");
+			context.classes.addBlock(newContext.classes);
+			context.classes.addCode("}");
+
+			if (elseContext && elseContext.classes.parts.length) {
+				context.classes.addCode("else {");
+				context.classes.addBlock(elseContext.classes);
+				context.classes.addCode("}");
+			}
+		}
+
+		if (newContext.content.parts.length) {
+			context.content.addCode("if (" + condition + ") {");
+			context.content.addBlock(newContext.content);
+			context.content.addCode("}");
+
+			if (elseContext && elseContext.content.parts.length) {
+				context.content.addCode("else {");
+				context.content.addBlock(elseContext.content);
+				context.content.addCode("}");
+			}
+		}
+	},
+	for: function(compiler, context, node) {
+		var newContext = {
+			content: context.content
+		};
+
+		var index = compiler.scope.getName("i");
+		var collectionName = compiler.scope.getName("collection");
+		var collection = POSSIBLE_COMMENT.test(node.collection) ? node.collection + "\n" : node.collection;
+
+		context.content.addCode("var " + collectionName + " = (" + collection + ");");
+		context.content.addCode("for (var " + index + " = 0; " + index + " < " + collectionName + ".length; " + index + "++) {");
+		context.content.addCode("var " + node.variable + " = " + collectionName + "[" + index + "];");
+
+		node.children.forEach(function(child) {
+			compileNode(compiler, newContext, child);
+		});
+
+		context.content.addCode("}");
 	}
 };
 
-function adjustContext(context, node) {
-	var handler = nodeHandlers[node.type];
+function compileNode(compiler, context, node) {
+	var transformer = transform[node.type];
 
-	if(!handler) {
-		throw new Error("Unknown type: " + node.type);
+	if (!transformer) {
+		throw new Error("Unknown node type " + node.type + ".");
 	}
 
-	return handler(node, context);
+	transformer(compiler, context, node);
 }
 
-function compileNode(node, context) {
-	var newContext = adjustContext(context, node);
-	var children = node.children;
+function compile(tree, options) {
+	var scope = new Scope();
 
-	if(newContext) {
-		context = newContext;
-	}
+	var compiler = {
+		scope: scope,
+		possibleConflicts: scope.used,
+		options: options
+	};
 
-	if(children) {
-		for(var i = 0; i < children.length; i++) {
-			var child = children[i];
-
-			compileNode(child, context);
-		}
-	}
-
-	if(newContext) {
-		newContext.done();
-	}
-}
-
-function compile(tree) {
 	var context = {
-		content: new utilities.CodeContext(),
-		scope: new Scope(),
-		done: function() {}
+		content: new CodeBlock()
 	};
 
-	context.scope.used.__output = true;
+	compileNode(compiler, context, tree);
 
-	compileNode(tree, context);
+	var outputVariable = scope.getName("output");
 
-	var staticContent = context.content.generateStatic();
+	var code =
+		"'use strict';\n\n" +
+		utilities.escapeAttributeValue + "\n" +
+		utilities.escapeContent + "\n\n" +
+		"var " + outputVariable + " = '" + context.content.toCode(outputVariable, "text") +
+		"\n\nreturn " + outputVariable + ";";
 
-	if(staticContent !== null) {
-		return function() {
-			return staticContent;
-		};
-	}
-
-	var functionBody =
-		context.scope.generateCode() +
-		"\n__output = '" +
-		context.content.generateCode("text") +
-		"\nreturn __output;";
-
-	var compiled = new Function("__util, data", functionBody);
-
-	return function(data) {
-		return compiled(utilities, data);
-	};
+	return new Function("data", code);
 }
 
-nodeHandlers.doctype = function(node, context) {
-	return {
-		parent: context,
-		done: function() {
-			this.parent.content.addText("<!DOCTYPE html>");
-		}
-	};
-};
-
-nodeHandlers.include = function(node, context) {
-	return {
-		attributes: context.attributes,
-		content: context.content,
-		scope: context.scope,
-		parent: context,
-		done: function() {}
-	};
-};
-
-nodeHandlers.block = function(node, context) {
-	return {
-		attributes: context.attributes,
-		content: context.content,
-		scope: context.scope,
-		parent: context,
-		done: function() {}
-	};
-};
-
-nodeHandlers.extends = function(node, context) {
-	return {
-		parent: context,
-		done: function() {}
-	};
-};
-
-nodeHandlers.if = function(node, context) {
-	var conditionName = context.scope.createName("condition");
-
-	if(node.elif.length > 0) {
-		node.else = {
-			children: [{
-				type: "if",
-				condition: node.elif[0].condition,
-				children: node.elif[0].children,
-				elif: node.elif.slice(1),
-				else: node.else
-			}]
-		};
-	}
-
-	return {
-		attributes: new utilities.CodeContext(),
-		content: new utilities.CodeContext(),
-		scope: context.scope,
-		parent: context,
-		done: function() {
-			var elseContext;
-
-			if(node.else) {
-				elseContext = {
-					attributes: new utilities.CodeContext(),
-					content: new utilities.CodeContext(),
-					scope: context.scope,
-					parent: context
-				};
-
-				for(var i = 0; i < node.else.children.length; i++) {
-					var child = node.else.children[i];
-
-					compileNode(child, elseContext);
-				}
-			}
-
-			if(this.attributes.parts.length === 0 && (!node.else || elseContext.attributes.parts.length === 0)) {
-				this.parent.content.addCode(conditionName + " = (" + node.condition + "\n);\n");
-			} else {
-				this.parent.attributes.addCode(conditionName + " = (" + node.condition + "\n);\n");
-				this.parent.attributes.addCode("if(" + conditionName + ") {\n");
-				this.parent.attributes.addContext(this.attributes);
-				this.parent.attributes.addCode("}\n");
-
-				if(node.else && elseContext.attributes.parts.length !== 0) {
-					this.parent.attributes.addCode("else {\n");
-					this.parent.attributes.addContext(elseContext.attributes);
-					this.parent.attributes.addCode("}\n");
-				}
-			}
-
-			if(this.content.parts.length !== 0 || node.else) {
-				this.parent.content.addCode("if(" + conditionName + ") {\n");
-				this.parent.content.addContext(this.content);
-				this.parent.content.addCode("}\n");
-			}
-
-			if(node.else && elseContext.content.parts.length !== 0) {
-				this.parent.content.addCode("else {\n");
-				this.parent.content.addContext(elseContext.content);
-				this.parent.content.addCode("}\n");
-			}
-
-			this.scope.used[conditionName] = false;
-		}
-	};
-};
-
-nodeHandlers.for = function(node, context) {
-	var indexName = context.scope.createName("index");
-	var collectionName = context.scope.createName("collection");
-
-	if(context.scope.used[node.variableName]) {
-		throw new SyntaxError("Name " + node.variableName + " is in use in a containing scope."); // TODO: Rename variable (requires esprima and escodegen as dependencies) or use a wrapping function (slower).
-	}
-
-	context.scope.used[node.variableName] = true;
-
-	return {
-		content: new utilities.CodeContext(),
-		scope: context.scope,
-		parent: context,
-		done: function() {
-			this.parent.content.addCode(
-				collectionName + " = (" + node.collection + "\n);\n" +
-				"for(" + indexName + " = 0; " + indexName + " < " + collectionName + ".length; " + indexName + "++) {\n" +
-				node.variableName + " = " + collectionName + "[" + indexName + "];\n"
-			);
-			this.parent.content.addContext(this.content);
-			this.parent.content.addCode("}\n");
-
-			this.scope.used[node.variableName] = false;
-			this.scope.used[collectionName] = false;
-			this.scope.used[indexName] = false;
-		}
-	};
-};
-
+module.exports.constructor = { name: "razorleaf.compiler" };
 module.exports.compile = compile;
-module.exports.utilities = utilities;
-module.exports.nodeHandlers = nodeHandlers;
+module.exports.transform = transform;

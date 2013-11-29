@@ -1,20 +1,59 @@
 "use strict";
 
 var razorleaf = require("./");
+var parser = require("./parser");
 
 var tests = [
 	{
-		name: "escaping",
-		template: '"println!(\\"Hello, world\\")"',
+		name: "escaped double-quotes",
+		template: '"println!(\\"Hello, world!\\")"',
 		expected: { output: 'println!("Hello, world!")' }
+	},
+	{
+		name: "non-conflicting output variable",
+		template: '% var output;\n"#{typeof output}"',
+		expected: { output: "undefined" }
+	},
+	{
+		name: "including attributes",
+		template: "script include async",
+		include: {
+			async: "async:"
+		},
+		expected: { output: "<script async></script>" }
+	},
+	{
+		name: "conditional attributes",
+		template: 'div "Hello, world!" \n\tif true\n\t\t.pass id: "#{data.example}"\n\tif false\n\t\t.fail data-fail: "true"',
+		data: { example: "example" },
+		expected: { output: '<div id="example" class=" pass">Hello, world!</div>' }
+	},
+	{
+		name: "reordering of mixed conditionals",
+		template: '% var x = true;\ndiv "Hello, world!" \n\tif x\n\t\t"#{data.example}"\n\tif x = false\n\t\tdata-fail: "true"',
+		data: { example: "example" },
+		expected: { output: '<div>Hello, world!example</div>' }
+	},
+	{
+		name: "nested conditionals",
+		template: 'div if true\n\tif 1\n\t\t"Good" data-example:',
+		data: { example: "example" },
+		expected: { output: '<div data-example>Good</div>' }
 	}
 ];
 
 function passes(test) {
 	var output, error, errorMessage;
 
+	var options = {
+		load: function(name) {
+			return parser.parse(test.include[name], options);
+		},
+		debug: true
+	};
+
 	try {
-		output = razorleaf.compile(test.template, test.options)(test.data);
+		output = razorleaf.compile(test.template, options)(test.data);
 	} catch (e) {
 		error = e;
 		errorMessage = e.message;

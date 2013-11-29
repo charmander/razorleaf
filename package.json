@@ -1,15 +1,16 @@
 {
 	"name": "razorleaf",
-	"version": "1.6.0",
+	"version": "2.0.0",
 	"main": "razorleaf.js",
 	"files": [
 		"razorleaf.js",
 		"compiler.js",
 		"parser.js",
-		"utilities.js"
+		"utilities.js",
+		"unicode.js"
 	],
 	"description": "A template engine for HTML",
-	"keywords": ["template", "bulbasaur"],
+	"keywords": ["template"],
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/charmander/razorleaf"

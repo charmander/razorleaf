@@ -1,154 +1,126 @@
 "use strict";
 
-var push = Array.prototype.push;
-var amp = /&/g;
-var quot = /"/g;
-var lt = /</g;
-var gt = />/g;
-
-var utilities = {
-	escapeAttributeValue: function(value) {
-		return ("" + value).replace(amp, "&amp;")
-		                   .replace(quot, "&quot;");
-	},
-	escapeContent: function(content) {
-		return ("" + content).replace(amp, "&amp;")
-		                     .replace(lt, "&lt;")
-		                     .replace(gt, "&gt;");
-	},
-	CodeContext: CodeContext
-};
-
-function escapeStringLiteral(string) {
-	var result = "";
-	var escaped = false;
-
-	for(var i = 0; i < string.length; i++) {
-		var c = string.charAt(i);
-
-		if(escaped) {
-			escaped = false;
-			result += c;
-		} else if(c === "\\") {
-			escaped = true;
-			result += c;
-		} else if(c === "\n") {
-			result += "\\n";
-		} else if(c === "\r") {
-			result += "\\r";
-		} else if(c === "\u2028") {
-			result += "\\u2028";
-		} else if(c === "\u2029") {
-			result += "\\u2029";
-		} else if(c === "'") {
-			result += "\\'";
-		} else {
-			result += c;
-		}
-	}
-
-	return result;
+function escapeLiteral(text) {
+	return text.replace(/\\/g, "\\\\")
+	           .replace(/'/g, "\\'")
+	           .replace(/\r/g, "\\r")
+	           .replace(/\n/g, "\\n")
+	           .replace(/\u2028/g, "\\u2028")
+	           .replace(/\u2029/g, "\\u2029");
 }
 
-function CodeContext(escapeFunction, initialParts) {
-	this.parts = initialParts || [];
-	this.escapeFunction = escapeFunction;
+function escapeAttributeValue(value) {
+	return ("" + value).replace(/&/g, "&amp;")
+	                   .replace(/"/g, "&quot;");
 }
 
-CodeContext.prototype.addCode = function(code) {
-	this.parts.push({type: "code", value: code});
+function escapeContent(value) {
+	return ("" + value).replace(/&/g, "&amp;")
+	                   .replace(/</g, "&lt;")
+	                   .replace(/>/g, "&gt;");
+}
+
+function CodeBlock() {
+	this.parts = [];
+}
+
+CodeBlock.prototype.addText = function(text) {
+	this.parts.push({
+		type: "text",
+		value: text
+	});
+
+	return this;
 };
 
-CodeContext.prototype.addText = function(text) {
-	if(this.escapeFunction) {
-		text = utilities[this.escapeFunction](text);
-	}
+CodeBlock.prototype.addExpression = function(escapeFunction, expression) {
+	this.parts.push({
+		type: "expression",
+		escapeFunction: escapeFunction,
+		value: expression
+	});
 
-	this.parts.push({type: "text", value: text});
+	return this;
 };
 
-CodeContext.prototype.addExpression = function(expression) {
-	this.parts.push({type: "expression", value: expression, escapeFunction: this.escapeFunction});
+CodeBlock.prototype.addCode = function(code) {
+	this.parts.push({
+		type: "code",
+		value: code
+	});
+
+	return this;
 };
 
-CodeContext.prototype.addContext = function(context) {
-	push.apply(this.parts, context.parts);
+CodeBlock.prototype.addBlock = function(block) {
+	Array.prototype.push.apply(this.parts, block.parts);
+
+	return this;
 };
 
-CodeContext.prototype.generateStatic = function() {
-	var isStatic = function(part) {
-		return part.type === "text";
-	};
+CodeBlock.prototype.toCode = function(outputVariable, initialState) {
+	var code = "";
+	var currentType = initialState;
 
-	if(!this.parts.every(isStatic)) {
-		return null;
-	}
-
-	return this.parts.map(function(part) {
-		return part.value;
-	}).join("");
-};
-
-CodeContext.prototype.generateCode = function(initial) {
-	var current = initial || "code";
-	var generated = "";
-
-	for(var i = 0; i < this.parts.length; i++) {
+	for (var i = 0; i < this.parts.length; i++) {
 		var part = this.parts[i];
 
-		switch(part.type) {
-		case "code":
-			if(current === "text") {
-				generated += "';\n";
-			} else if(current === "expression") {
-				generated += ";\n";
-			}
+		switch (part.type) {
+			case "text":
+				if (currentType === "code") {
+					code += outputVariable + " += '";
+				} else if (currentType === "expression") {
+					code += " + '";
+				}
 
-			generated += part.value;
-			current = "code";
+				code += escapeLiteral(part.value);
+				currentType = "text";
+				break;
 
-			break;
-		case "text":
-			if(current === "code") {
-				generated += "__output += '";
-			} else if(current === "expression") {
-				generated += " + '";
-			}
+			case "expression":
+				if (currentType === "code") {
+					code += outputVariable + " += ";
+				} else if (currentType === "expression") {
+					code += " + ";
+				} else {
+					code += "' + ";
+				}
 
-			generated += escapeStringLiteral(part.value);
-			current = "text";
+				if (part.escapeFunction) {
+					code += part.escapeFunction + "((" + part.value + "))";
+				} else {
+					code += "(" + part.value + ")";
+				}
 
-			break;
-		case "expression":
-			if(current === "code") {
-				generated += "__output += ";
-			} else if(current === "text") {
-				generated += "' + ";
-			} else {
-				generated += " + ";
-			}
+				currentType = "expression";
+				break;
 
-			if(part.escapeFunction) {
-				generated += "__util." + part.escapeFunction + "((" + part.value + "))";
-			} else {
-				generated += "(" + part.value + ")";
-			}
+			case "code":
+				if (currentType === "text") {
+					code += "';\n";
+				} else if (currentType === "expression") {
+					code += ";\n";
+				}
 
-			current = "expression";
+				code += part.value + "\n";
+				currentType = "code";
+				break;
 
-			break;
-		default:
-			throw new Error("Unknown part type");
+			default:
+				throw new Error("Unknown part type " + part.type + ".");
 		}
 	}
 
-	if(current === "text") {
-		generated += "';";
-	} else if(current === "expression") {
-		generated += ";";
+	if (currentType === "text") {
+		code += "';";
+	} else if (currentType === "expression") {
+		code += ";";
 	}
 
-	return generated;
+	return code;
 };
 
-module.exports = utilities;
+module.exports.constructor = { name: "razorleaf.utilities" };
+module.exports.escapeAttributeValue = escapeAttributeValue;
+module.exports.escapeContent = escapeContent;
+module.exports.CodeBlock = CodeBlock;
