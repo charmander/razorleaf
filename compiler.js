@@ -52,15 +52,13 @@ var transform = {
 
 		var newContext = {
 			attributes: new CodeBlock().addText("<" + name),
-			content: new CodeBlock(),
+			content: !isVoid && new CodeBlock(),
 			classes: new CodeBlock()
 		};
 
-		if (!isVoid) {
-			node.children.forEach(function(child) {
-				compileNode(compiler, newContext, child);
-			});
-		}
+		node.children.forEach(function(child) {
+			compileNode(compiler, newContext, child);
+		});
 
 		context.content.addBlock(newContext.attributes);
 
