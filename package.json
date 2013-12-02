@@ -13,10 +13,10 @@
 	"keywords": ["template"],
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/charmander/razorleaf"
+		"url": "https://charmander.me/git/razorleaf"
 	},
 	"bugs": {
-		"url": "https://github.com/charmander/razorleaf/issues"
+		"email": "campersander@gmail.com"
 	},
 	"homepage": "https://charmander.me/razorleaf/",
 	"license": "MIT"
