@@ -12,23 +12,19 @@ in larger libraries.
 Elements are defined by their names only; no other special character is
 necessary.
 
-```
-p
-```
+    p
 
-```html
-<p></p>
-```
+<!-- -->
+
+    <p></p>
 
 Void elements are recognized automatically.
 
-```
-meta
-```
+    meta
 
-```html
-<meta>
-```
+<!-- -->
+
+    <meta>
 
 ### Strings
 
@@ -36,36 +32,30 @@ Strings are double-quoted and escaped for use in HTML as needed. Backslash
 escape codes can be used as in JavaScript. No whitespace is added
 around strings.
 
-```
-"--> A string <--\n" "A string containing \"double-quotes\""
-```
+    "--> A string <--\n" "A string containing \"double-quotes\""
 
-```html
---&gt; A string &lt;--
-A string containing "double-quotes"
-```
+<!-- -->
+
+    --&gt; A string &lt;--
+    A string containing "double-quotes"
 
 Strings can also contain interpolated sections, delimited by `#{` and `}`.
 `#{` can be escaped with a leading backslash; `}` doesn’t require escaping.
 
-```
-"#{6 * 7}"
-```
+    "#{6 * 7}"
 
-```html
-42
-```
+<!-- -->
+
+    42
 
 If an exclamation mark precedes the string, it and any of its interpolated
 sections will not be escaped.
 
-```
-!"<!-- A significant comment -->"
-```
+    !"<!-- A significant comment -->"
 
-```html
-<!-- A significant comment -->
-```
+<!-- -->
+
+    <!-- A significant comment -->
 
 ### Attributes
 
@@ -75,40 +65,34 @@ its value; if a value isn’t provided, the attribute is assumed to be boolean
 (and present). Note that a string used as an attributes value cannot be “raw”
 — that is, cannot be preceded by an exclamation mark.
 
-```
-meta charset: "utf-8"
-```
+    meta charset: "utf-8"
 
-```html
-<meta charset="utf-8">
-```
+<!-- -->
+
+    <meta charset="utf-8">
 
 ### Hierarchy
 
 Hierarchy in Razor Leaf is defined using indentation. For example:
 
-```
-html
-	head
-		meta charset: "utf-8"
+    html
+    	head
+    		meta charset: "utf-8"
 
-		title "Example"
+    		title "Example"
 
-		link
-			rel: "stylesheet"
-			type: "text/css"
-			href: "stylesheets/example.css"
+    		link
+    			rel: "stylesheet"
+    			type: "text/css"
+    			href: "stylesheets/example.css"
 
-	body
-		p id: "introduction"
-			"This template is a brief example of hierarchy."
-```
+    	body
+    		p id: "introduction"
+    			"This template is a brief example of hierarchy."
 
-```html
-<html><head><meta charset="utf-8"><title>Example</title><link rel="stylesheet"
-type="text/css" href="stylesheets/example.css"></head><body><p
-id="introduction">This template is a brief example of hierarchy.</p></body></html>
-```
+<!-- -->
+
+    <html><head><meta charset="utf-8"><title>Example</title><link rel="stylesheet" type="text/css" href="stylesheets/example.css"></head><body><p id="introduction">This template is a brief example of hierarchy.</p></body></html>
 
 Content found after an element on the same line will also be considered that
 element’s content.
@@ -127,18 +111,14 @@ and wrapped in curly braces.
 
 For example, this template:
 
-```
-% if (i < 5)
-	!"#{i}"
-```
+    % if (i < 5)
+        !"#{i}"
 
 might compile to this JavaScript:
 
-```javascript
-if (i < 5) {
-	output += i;
-}
-```
+    if (i < 5) {
+        output += i;
+    }
 
 ### Special blocks
 
