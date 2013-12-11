@@ -47,6 +47,10 @@ var transform = {
 	root: passThrough,
 	block: passThrough,
 	element: function(compiler, context, node) {
+		if (!context.content) {
+			throw node.unexpected;
+		}
+
 		var name = node.name.toLowerCase();
 		var isVoid = voidTags.indexOf(name) !== -1;
 
@@ -78,7 +82,7 @@ var transform = {
 	},
 	attribute: function(compiler, context, node) {
 		if (!context.attributes) {
-			throw new SyntaxError("Unexpected attribute"); // TODO: Where?
+			throw node.unexpected;
 		}
 
 		context.attributes.addText(" " + node.name);
@@ -98,6 +102,10 @@ var transform = {
 		}
 	},
 	string: function(compiler, context, node) {
+		if (!context.content) {
+			throw node.unexpected;
+		}
+
 		context.content.addBlock(node.value);
 
 		for (var i = 0; i < node.value.parts.length; i++) {
@@ -110,7 +118,7 @@ var transform = {
 	},
 	class: function(compiler, context, node) {
 		if (!context.classes) {
-			throw new SyntaxError("Unexpected class"); // TODO: Where?
+			throw node.unexpected;
 		}
 
 		context.classes.addText(" " + node.value);

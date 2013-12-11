@@ -217,6 +217,7 @@ var states = {
 			parent: parser.context,
 			children: [],
 			indent: parser.indent,
+			unexpected: parser.error("Unexpected element"),
 			position: {
 				line: parser.position.line,
 				character: parser.position.character
@@ -241,6 +242,7 @@ var states = {
 			type: "class",
 			value: parser.identifier,
 			parent: parser.context,
+			unexpected: parser.error("Unexpected class"),
 			position: {
 				line: parser.position.line,
 				character: parser.position.character
@@ -265,6 +267,7 @@ var states = {
 			name: parser.identifier,
 			value: null,
 			parent: parser.context,
+			unexpected: parser.error("Unexpected attribute"),
 			position: {
 				line: parser.position.line,
 				character: parser.position.character
@@ -292,6 +295,7 @@ var states = {
 				type: "string",
 				value: parser.string,
 				parent: parser.context,
+				unexpected: parser.error("Unexpected string"),
 				position: {
 					line: parser.position.line,
 					character: parser.position.character

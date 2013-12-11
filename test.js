@@ -37,7 +37,6 @@ var tests = [
 	{
 		name: "nested conditionals",
 		template: 'div if true\n\tif 1\n\t\t"Good" data-example:',
-		data: { example: "example" },
 		expected: { output: '<div data-example>Good</div>' }
 	}
 ];
