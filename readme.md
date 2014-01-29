@@ -71,6 +71,17 @@ its value; if a value isn’t provided, the attribute is assumed to be boolean
 
 	<meta charset="utf-8">
 
+### Classes
+
+Classes are marked up with a leading period, as in <code>.<i>class</i></code>.
+
+	fieldset .upload-meta
+		input.required
+
+<!-- -->
+
+	<fieldset class="upload-meta"><input class="required"></fieldset>
+
 ### Hierarchy
 
 Hierarchy in Razor Leaf is defined using indentation. For example:
