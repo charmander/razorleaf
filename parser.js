@@ -457,7 +457,7 @@ var keywords = {
 		return states.content(parser, c);
 	},
 	include: function(parser, c) {
-		var leadingWhitespace = function(parser, c) {
+		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -468,9 +468,9 @@ var keywords = {
 			}
 
 			throw parser.error("Expected name of included template, not " + describe(c));
-		};
+		}
 
-		var identifier = function(parser, c) {
+		function identifier(parser, c) {
 			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
 				parser.context.children.push({
 					type: "include",
@@ -487,7 +487,7 @@ var keywords = {
 
 			parser.identifier += c;
 			return identifier;
-		};
+		}
 
 		return leadingWhitespace(parser, c);
 	},
@@ -504,7 +504,7 @@ var keywords = {
 
 		parser.root.blockActions = {};
 
-		var leadingWhitespace = function(parser, c) {
+		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -515,9 +515,9 @@ var keywords = {
 			}
 
 			throw parser.error("Expected name of parent template, not " + describe(c));
-		};
+		}
 
-		var identifier = function(parser, c) {
+		function identifier(parser, c) {
 			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
 				parser.root.extends = parser.identifier;
 
@@ -526,12 +526,12 @@ var keywords = {
 
 			parser.identifier += c;
 			return identifier;
-		};
+		}
 
 		return leadingWhitespace(parser, c);
 	},
 	block: function(parser, c) {
-		var leadingWhitespace = function(parser, c) {
+		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -542,9 +542,9 @@ var keywords = {
 			}
 
 			throw parser.error("Expected name of block, not " + describe(c));
-		};
+		}
 
-		var identifier = function(parser, c) {
+		function identifier(parser, c) {
 			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
 				if (parser.root.blocks.hasOwnProperty(parser.identifier)) {
 					throw parser.error("A block named “" + parser.identifier + "” has already been defined");
@@ -566,12 +566,12 @@ var keywords = {
 
 			parser.identifier += c;
 			return identifier;
-		};
+		}
 
 		return leadingWhitespace(parser, c);
 	},
 	replace: function(parser, c) {
-		var leadingWhitespace = function(parser, c) {
+		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -582,9 +582,9 @@ var keywords = {
 			}
 
 			throw parser.error("Expected name of block to replace, not " + describe(c));
-		};
+		}
 
-		var identifier = function(parser, c) {
+		function identifier(parser, c) {
 			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
 				var newBlock = {
 					type: "block",
@@ -611,14 +611,14 @@ var keywords = {
 
 			parser.identifier += c;
 			return identifier;
-		};
+		}
 
 		return leadingWhitespace(parser, c);
 	},
 	if: function(parser, c) {
 		var condition_ = "";
 
-		var leadingWhitespace = function(parser, c) {
+		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -628,9 +628,9 @@ var keywords = {
 			}
 
 			return condition(parser, c);
-		};
+		}
 
-		var condition = function(parser, c) {
+		function condition(parser, c) {
 			if (c === null || c === "\n") {
 				parser.context = {
 					type: "if",
@@ -653,7 +653,7 @@ var keywords = {
 
 			condition_ += c;
 			return condition;
-		};
+		}
 
 		return leadingWhitespace(parser, c);
 	},
@@ -666,7 +666,7 @@ var keywords = {
 			throw parser.error("Unexpected elif");
 		}
 
-		var leadingWhitespace = function(parser, c) {
+		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -676,9 +676,9 @@ var keywords = {
 			}
 
 			return condition(parser, c);
-		};
+		}
 
-		var condition = function(parser, c) {
+		function condition(parser, c) {
 			if (c === null || c === "\n") {
 				var elif = {
 					type: "elif",
@@ -700,7 +700,7 @@ var keywords = {
 
 			condition_ += c;
 			return condition;
-		};
+		}
 
 		return leadingWhitespace(parser, c);
 	},
@@ -729,7 +729,7 @@ var keywords = {
 	for: function(parser, c) {
 		var collection_ = "";
 
-		var leadingWhitespace = function(parser, c) {
+		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -744,9 +744,9 @@ var keywords = {
 			}
 
 			throw parser.error("Expected name of loop variable, not " + describe(c));
-		};
+		}
 
-		var identifier = function(parser, c) {
+		function identifier(parser, c) {
 			if (c === null || (!JS_IDENTIFIER.test(c) && c !== " ")) {
 				throw parser.error("Expected in");
 			}
@@ -757,9 +757,9 @@ var keywords = {
 
 			parser.identifier += c;
 			return identifier;
-		};
+		}
 
-		var whitespace1 = function(parser, c) {
+		function whitespace1(parser, c) {
 			if (c === " ") {
 				return whitespace1;
 			}
@@ -769,17 +769,17 @@ var keywords = {
 			}
 
 			throw parser.error("Expected of");
-		};
+		}
 
-		var of1 = function(parser, c) {
+		function of1(parser, c) {
 			if (c === "f") {
 				return of2;
 			}
 
 			throw parser.error("Expected of");
-		};
+		}
 
-		var of2 = function(parser, c) {
+		function of2(parser, c) {
 			if (c === null) {
 				throw parser.error("Expected loop collection expression");
 			}
@@ -793,9 +793,9 @@ var keywords = {
 			}
 
 			return collection(parser, c);
-		};
+		}
 
-		var whitespace2 = function(parser, c) {
+		function whitespace2(parser, c) {
 			if (c === null) {
 				throw parser.error("Expected loop collection expression");
 			}
@@ -805,9 +805,9 @@ var keywords = {
 			}
 
 			return collection(parser, c);
-		};
+		}
 
-		var collection = function(parser, c) {
+		function collection(parser, c) {
 			if (c === null || c === "\n") {
 				parser.context = {
 					type: "for",
@@ -829,7 +829,7 @@ var keywords = {
 
 			collection_ += c;
 			return collection;
-		};
+		}
 
 		return leadingWhitespace(parser, c);
 	}
@@ -866,8 +866,9 @@ function parse(template, options) {
 			line: 1,
 			character: 0
 		},
-		error: function(message) {
-			var where = eof ? "EOF" : "line " + parser.position.line + ", character " + parser.position.character;
+		error: function(message, position) {
+			position = position || parser.position;
+			var where = eof ? "EOF" : "line " + position.line + ", character " + position.character;
 			return new SyntaxError(message + " at " + where + " in " + options.name + ".");
 		},
 		warn: function(message) {
