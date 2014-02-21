@@ -1,5 +1,3 @@
-![Status]
-
 Razor Leaf is a template engine for JavaScript with a convenient
 indentation-based syntax. It aims to reduce the redundancy inherent in HTML
 with simple rules, a sparse syntax, and a few further features not found
@@ -169,5 +167,3 @@ one argument, `data`, which can be used (under that name) in the template.
 - **`debug`**: If `true`, warnings will be printed. (In a later version, this will enable error rewriting.)
 - **`load(name)`**: A function that returns a parsed template represented by `name`.
   This is filled automatically by most loaders.
-
-[Status]: https://charmander.me/razorleaf/status.svg
