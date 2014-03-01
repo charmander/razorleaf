@@ -145,6 +145,7 @@ Some names define special blocks. These are:
   outside of block actions.
 - **`block (name)`**: Defines a replaceable block.
 - **`replace (name)`**: Replaces a block.
+- **`append (name)`**: Appends to a block.
 
 ## API
 

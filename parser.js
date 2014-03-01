@@ -2,6 +2,7 @@
 
 var utilities = require("./utilities");
 var CodeBlock = utilities.CodeBlock;
+var push = Array.prototype.push;
 
 var HEX = /[\da-fA-F]/;
 var DIGIT = /\d/;
@@ -596,6 +597,51 @@ var keywords = {
 
 				var action = function(block) {
 					block.children = newBlock.children;
+				};
+
+				if (parser.root.blockActions.hasOwnProperty(parser.identifier)) {
+					parser.root.blockActions[parser.identifier].push(action);
+				} else {
+					parser.root.blockActions[parser.identifier] = [action];
+				}
+
+				parser.context = newBlock;
+
+				return states.content(parser, c);
+			}
+
+			parser.identifier += c;
+			return identifier;
+		}
+
+		return leadingWhitespace(parser, c);
+	},
+	append: function(parser, c) {
+		function leadingWhitespace(parser, c) {
+			if (c === " ") {
+				return leadingWhitespace;
+			}
+
+			if (c !== null && BLOCK_OR_TEMPLATE_NAME.test(c)) {
+				parser.identifier = "";
+				return identifier(parser, c);
+			}
+
+			throw parser.error("Expected name of block to append to, not " + describe(c));
+		}
+
+		function identifier(parser, c) {
+			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
+				var newBlock = {
+					type: "block",
+					name: parser.identifier,
+					parent: parser.context,
+					children: [],
+					indent: parser.indent
+				};
+
+				var action = function(block) {
+					push.apply(block.children, newBlock.children);
 				};
 
 				if (parser.root.blockActions.hasOwnProperty(parser.identifier)) {

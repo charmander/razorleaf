@@ -38,6 +38,14 @@ var tests = [
 		name: "nested conditionals",
 		template: 'div if true\n\tif 1\n\t\t"Good" data-example:',
 		expected: { output: '<div data-example>Good</div>' }
+	},
+	{
+		name: "block appension",
+		template: 'extends layout\nappend title "two"',
+		include: {
+			layout: 'doctype\nhtml\n\thead\n\t\ttitle block title "one, "'
+		},
+		expected: { output: '<!DOCTYPE html><html><head><title>one, two</title></head></html>' }
 	}
 ];
 
