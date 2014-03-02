@@ -785,29 +785,73 @@ var keywords = {
 					throw parser.error("Expected name of loop variable, not " + describe(c));
 				}
 
-				parser.identifier = "";
-				return identifier(parser, c);
+				parser.itemIdentifier = "";
+				parser.indexIdentifier = null;
+				return itemIdentifier(parser, c);
 			}
 
 			throw parser.error("Expected name of loop variable, not " + describe(c));
 		}
 
-		function identifier(parser, c) {
-			if (c === null || (!JS_IDENTIFIER.test(c) && c !== " ")) {
-				throw parser.error("Expected in");
-			}
-
+		function itemIdentifier(parser, c) {
 			if (c === " ") {
-				return whitespace1;
+				return whitespaceAfterItemIdentifier;
 			}
 
-			parser.identifier += c;
-			return identifier;
+			if (c === ",") {
+				parser.indexIdentifier = "";
+				return whitespaceBeforeIndexIdentifier;
+			}
+
+			if (c === null || !JS_IDENTIFIER.test(c)) {
+				throw parser.error("Expected of or comma");
+			}
+
+			parser.itemIdentifier += c;
+			return itemIdentifier;
 		}
 
-		function whitespace1(parser, c) {
+		function whitespaceAfterItemIdentifier(parser, c) {
 			if (c === " ") {
-				return whitespace1;
+				return whitespaceAfterItemIdentifier;
+			}
+
+			if (c === "o") {
+				return of1;
+			}
+
+			if (c === ",") {
+				parser.indexIdentifier = "";
+				return whitespaceBeforeIndexIdentifier;
+			}
+
+			throw parser.error("Expected of or comma");
+		}
+
+		function whitespaceBeforeIndexIdentifier(parser, c) {
+			if (c === " ") {
+				return whitespaceBeforeIndexIdentifier;
+			}
+
+			return indexIdentifier(parser, c);
+		}
+
+		function indexIdentifier(parser, c) {
+			if (c === " ") {
+				return whitespaceAfterIndexIdentifier;
+			}
+
+			if (c === null || !JS_IDENTIFIER.test(c)) {
+				throw parser.error("Expected of");
+			}
+
+			parser.indexIdentifier += c;
+			return indexIdentifier;
+		}
+
+		function whitespaceAfterIndexIdentifier(parser, c) {
+			if (c === " ") {
+				return whitespaceAfterIndexIdentifier;
 			}
 
 			if (c === "o") {
@@ -857,7 +901,8 @@ var keywords = {
 			if (c === null || c === "\n") {
 				parser.context = {
 					type: "for",
-					variable: parser.identifier,
+					variable: parser.itemIdentifier,
+					indexName: parser.indexIdentifier,
 					collection: collection_,
 					parent: parser.context,
 					children: [],
@@ -902,6 +947,8 @@ function parse(template, options) {
 		indent: null,
 		indentType: null,
 		identifier: null,
+		itemIdentifier: null,
+		indexIdentifier: null,
 		raw: null,
 		string: null,
 		escapeFunction: null,

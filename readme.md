@@ -137,12 +137,10 @@ Some names define special blocks. These are:
 - **`if (condition)`**: Includes its content only if *`condition`* is met.
 - **`elif (condition)`**: Can immediately follow an `if` or an `elif`.
 - **`else`**: Can immediately follow an `if` or an `elif`.
-- **`for (identifier) of (collection)`**: Includes its content for each element
-  of the array or array-like object *`collection`*.
+- **`for (identifier) of (collection)`**: Includes its content for each element of the array or array-like object *`collection`*.
+- **`for (identifier), (index) of (collection)`**: Allows the index variable in a `for` loop to be named.
 - **`include (name)`**: Loads and includes another template.
-- **`extends (name)`**: Loads another template and replaces its blocks.
-  A template that extends another template cannot have any content
-  outside of block actions.
+- **`extends (name)`**: Loads another template and replaces its blocks. A template that extends another template cannot have any content outside of block actions.
 - **`block (name)`**: Defines a replaceable block.
 - **`replace (name)`**: Replaces a block.
 - **`append (name)`**: Appends to a block.
@@ -166,5 +164,4 @@ one argument, `data`, which can be used (under that name) in the template.
 ### Options
 
 - **`debug`**: If `true`, warnings will be printed. (In a later version, this will enable error rewriting.)
-- **`load(name)`**: A function that returns a parsed template represented by `name`.
-  This is filled automatically by most loaders.
+- **`load(name)`**: A function that returns a parsed template represented by `name`. This is filled automatically by most loaders.

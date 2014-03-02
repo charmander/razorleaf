@@ -46,6 +46,21 @@ var tests = [
 			layout: 'doctype\nhtml\n\thead\n\t\ttitle block title "one, "'
 		},
 		expected: { output: '<!DOCTYPE html><html><head><title>one, two</title></head></html>' }
+	},
+	{
+		name: "loop with index",
+		template: 'for x, y of [1, 2, 3]\n\t"#{x * (y + 1)}"',
+		expected: { output: "149" }
+	},
+	{
+		name: "non-conflicting variable in loop with index",
+		template: 'for x, i of [1, 2, 3]\n\tfor y of [4, 5, 6]\n\t\t"#{i}"',
+		expected: { output: "000111222" }
+	},
+	{
+		name: "non-conflicting variable in nested loops with index",
+		template: 'for x, i of [1, 2, 3]\n\tfor y, i of [4, 5, 6]\n\t\tfor z, i of [7, 8, 9]\n\t\t\t"#{i}"',
+		expected: { output: "012012012012012012012012012" }
 	}
 ];
 

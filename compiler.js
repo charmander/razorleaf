@@ -233,11 +233,23 @@ var transform = {
 			content: context.content
 		};
 
-		var index = compiler.scope.getName("i");
+		var originalName = null;
+		var index = node.indexName || compiler.scope.getName("i");
 		var collectionName = compiler.scope.getName("collection");
 		var collection = POSSIBLE_COMMENT.test(node.collection) ? node.collection + "\n" : node.collection;
 
 		context.content.addCode("var " + collectionName + " = (" + collection + ");");
+
+		if (node.indexName) {
+			if (compiler.scope.used.hasOwnProperty(node.indexName)) {
+				originalName = compiler.scope.getName("original");
+
+				context.content.addCode("var " + originalName + " = " + node.indexName + ";");
+			} else {
+				compiler.scope.used[node.indexName] = true;
+			}
+		}
+
 		context.content.addCode("for (var " + index + " = 0; " + index + " < " + collectionName + ".length; " + index + "++) {");
 		context.content.addCode("var " + node.variable + " = " + collectionName + "[" + index + "];");
 
@@ -246,6 +258,10 @@ var transform = {
 		});
 
 		context.content.addCode("}");
+
+		if (originalName) {
+			context.content.addCode(node.indexName + " = " + originalName + ";");
+		}
 	}
 };
 
