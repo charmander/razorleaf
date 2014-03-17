@@ -38,7 +38,7 @@ function DirectoryLoader(root, options) {
 	var loader = this;
 	var loaderOptions = {
 		load: function(name) {
-			return parser.parse(loader.read(name), combine(defaults, loaderOptions, loader.options));
+			return parser.parse(loader.read(name), combine(defaults, loaderOptions, { name: name }, loader.options));
 		}
 	};
 
