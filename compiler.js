@@ -12,15 +12,13 @@ function addPossibleConflicts(possibleConflicts, code) {
 	// characters are not a concern. As for eval – that obviously isn’t possible to work around.
 	var JS_IDENTIFIER = /(?:[a-zA-Z_]|\\u[0-9a-fA-F])(?:\w|\\u[0-9a-fA-F])*/g;
 
-	var m;
-
-	while (m = JS_IDENTIFIER.exec(code)) {
+	code.match(JS_IDENTIFIER).forEach(function (m) {
 		possibleConflicts[JSON.parse('"' + m + '"')] = true;
-	}
+	});
 }
 
 function passThrough(compiler, context, node) {
-	node.children.forEach(function(child) {
+	node.children.forEach(function (child) {
 		compileNode(compiler, context, child);
 	});
 }
@@ -29,7 +27,7 @@ function Scope() {
 	this.used = {};
 }
 
-Scope.prototype.getName = function(name) {
+Scope.prototype.getName = function (name) {
 	while (this.used.hasOwnProperty(name)) {
 		name += "_";
 	}
@@ -46,7 +44,7 @@ var voidTags = [
 var transform = {
 	root: passThrough,
 	block: passThrough,
-	element: function(compiler, context, node) {
+	element: function (compiler, context, node) {
 		if (!context.content) {
 			throw node.unexpected;
 		}
@@ -60,7 +58,7 @@ var transform = {
 			classes: new CodeBlock()
 		};
 
-		node.children.forEach(function(child) {
+		node.children.forEach(function (child) {
 			compileNode(compiler, newContext, child);
 		});
 
@@ -80,7 +78,7 @@ var transform = {
 			context.content.addText("</" + name + ">");
 		}
 	},
-	attribute: function(compiler, context, node) {
+	attribute: function (compiler, context, node) {
 		if (!context.attributes) {
 			throw node.unexpected;
 		}
@@ -101,7 +99,7 @@ var transform = {
 			}
 		}
 	},
-	string: function(compiler, context, node) {
+	string: function (compiler, context, node) {
 		if (!context.content) {
 			throw node.unexpected;
 		}
@@ -116,14 +114,14 @@ var transform = {
 			}
 		}
 	},
-	class: function(compiler, context, node) {
+	class: function (compiler, context, node) {
 		if (!context.classes) {
 			throw node.unexpected;
 		}
 
 		context.classes.addText(" " + node.value);
 	},
-	code: function(compiler, context, node) {
+	code: function (compiler, context, node) {
 		if (node.children.length) {
 			context.content.addCode(node.code + (POSSIBLE_COMMENT.test(node.code) ? "\n{" : " {"));
 
@@ -131,7 +129,7 @@ var transform = {
 				content: context.content
 			};
 
-			node.children.forEach(function(child) {
+			node.children.forEach(function (child) {
 				compileNode(compiler, newContext, child);
 			});
 
@@ -142,12 +140,12 @@ var transform = {
 
 		addPossibleConflicts(compiler.possibleConflicts, node.code);
 	},
-	include: function(compiler, context, node) {
+	include: function (compiler, context, node) {
 		var subtree = compiler.options.load(node.template);
 
 		compileNode(compiler, context, subtree);
 	},
-	if: function(compiler, context, node) {
+	if: function (compiler, context, node) {
 		var condition = POSSIBLE_COMMENT.test(node.condition) ? node.condition + "\n" : node.condition;
 
 		var newContext = {
@@ -158,7 +156,7 @@ var transform = {
 
 		var elseContext;
 
-		node.children.forEach(function(child) {
+		node.children.forEach(function (child) {
 			compileNode(compiler, newContext, child);
 		});
 
@@ -183,7 +181,7 @@ var transform = {
 				classes: context.classes && new CodeBlock()
 			};
 
-			node.else.children.forEach(function(child) {
+			node.else.children.forEach(function (child) {
 				compileNode(compiler, elseContext, child);
 			});
 		}
@@ -228,7 +226,7 @@ var transform = {
 			}
 		}
 	},
-	for: function(compiler, context, node) {
+	for: function (compiler, context, node) {
 		var newContext = {
 			content: context.content
 		};
@@ -253,7 +251,7 @@ var transform = {
 		context.content.addCode("for (var " + index + " = 0; " + index + " < " + collectionName + ".length; " + index + "++) {");
 		context.content.addCode("var " + node.variable + " = " + collectionName + "[" + index + "];");
 
-		node.children.forEach(function(child) {
+		node.children.forEach(function (child) {
 			compileNode(compiler, newContext, child);
 		});
 
@@ -299,6 +297,7 @@ function compile(tree, options) {
 		"var " + outputVariable + " = '" + context.content.toCode(outputVariable, "text") +
 		"\n\nreturn " + outputVariable + ";";
 
+	// jshint evil: true
 	return new Function("data", code);
 }
 

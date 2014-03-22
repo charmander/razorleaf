@@ -24,6 +24,8 @@ var singleCharEscapes = {
 };
 
 function isExpression(js) {
+	// jshint evil: true, nonew: false
+
 	try {
 		new Function("'use strict'; (" + js + "\n)");
 		return true;
@@ -41,7 +43,7 @@ function describe(c) {
 }
 
 var states = {
-	indent: function(parser, c) {
+	indent: function (parser, c) {
 		if (c === null && parser.indentString) {
 			parser.warn("Trailing whitespace");
 			return;
@@ -112,7 +114,7 @@ var states = {
 		parser.indentString += c;
 		return states.indent;
 	},
-	content: function(parser, c) {
+	content: function (parser, c) {
 		if (c === null) {
 			return;
 		}
@@ -169,14 +171,14 @@ var states = {
 
 		throw parser.error("Unexpected " + describe(c));
 	},
-	comment: function(parser, c) {
+	comment: function (parser, c) {
 		if (c === null || c === "\n") {
 			return states.content(parser, c);
 		}
 
 		return states.comment;
 	},
-	code: function(parser, c) {
+	code: function (parser, c) {
 		if (c === null || c === "\n") {
 			parser.context = {
 				type: "code",
@@ -198,7 +200,7 @@ var states = {
 		parser.code += c;
 		return states.code;
 	},
-	identifier: function(parser, c) {
+	identifier: function (parser, c) {
 		if (c === ":") {
 			return states.possibleAttribute;
 		}
@@ -229,7 +231,7 @@ var states = {
 
 		return states.content(parser, c);
 	},
-	className: function(parser, c) {
+	className: function (parser, c) {
 		if (c !== null && IDENTIFIER.test(c)) {
 			parser.identifier += c;
 			return states.className;
@@ -252,7 +254,7 @@ var states = {
 
 		return states.content(parser, c);
 	},
-	possibleAttribute: function(parser, c) {
+	possibleAttribute: function (parser, c) {
 		if (c !== null && IDENTIFIER.test(c)) {
 			parser.identifier += ":" + c;
 			return states.identifier;
@@ -279,14 +281,14 @@ var states = {
 
 		return states.content;
 	},
-	rawString: function(parser, c) {
+	rawString: function (parser, c) {
 		if (c !== '"') {
 			throw parser.error("Expected beginning quote of raw string, not " + describe(c));
 		}
 
 		return states.string;
 	},
-	string: function(parser, c) {
+	string: function (parser, c) {
 		if (c === null) {
 			throw parser.error("Expected end of string before end of file");
 		}
@@ -329,7 +331,7 @@ var states = {
 
 		return states.string;
 	},
-	stringPound: function(parser, c) {
+	stringPound: function (parser, c) {
 		if (c === "{") {
 			parser.interpolation = "";
 			return states.interpolation;
@@ -338,7 +340,7 @@ var states = {
 		parser.string.addText("#");
 		return states.string(parser, c);
 	},
-	interpolation: function(parser, c) {
+	interpolation: function (parser, c) {
 		if (c === null) {
 			throw parser.error("Interpolated section never resolves to a valid JavaScript expression"); // TODO: Where did it start?
 		}
@@ -352,7 +354,7 @@ var states = {
 		parser.interpolation += c;
 		return states.interpolation;
 	},
-	escape: function(parser, c) {
+	escape: function (parser, c) {
 		if (c === null) {
 			throw parser.error("Expected escape character");
 		}
@@ -379,7 +381,7 @@ var states = {
 
 		return states.string(parser, c);
 	},
-	escapeX1: function(parser, c) {
+	escapeX1: function (parser, c) {
 		if (c === null || !HEX.test(c)) {
 			throw parser.error("Expected hexadecimal digit");
 		}
@@ -387,7 +389,7 @@ var states = {
 		parser.charCode = parseInt(c, 16) << 4;
 		return states.escapeX2;
 	},
-	escapeX2: function(parser, c) {
+	escapeX2: function (parser, c) {
 		if (c === null || !HEX.test(c)) {
 			throw parser.error("Expected hexadecimal digit");
 		}
@@ -402,7 +404,7 @@ var states = {
 
 		return states.string;
 	},
-	escapeU1: function(parser, c) {
+	escapeU1: function (parser, c) {
 		if (c === null || !HEX.test(c)) {
 			throw parser.error("Expected hexadecimal digit");
 		}
@@ -410,7 +412,7 @@ var states = {
 		parser.charCode = parseInt(c, 16) << 12;
 		return states.escapeU2;
 	},
-	escapeU2: function(parser, c) {
+	escapeU2: function (parser, c) {
 		if (c === null || !HEX.test(c)) {
 			throw parser.error("Expected hexadecimal digit");
 		}
@@ -418,7 +420,7 @@ var states = {
 		parser.charCode |= parseInt(c, 16) << 8;
 		return states.escapeU3;
 	},
-	escapeU3: function(parser, c) {
+	escapeU3: function (parser, c) {
 		if (c === null || !HEX.test(c)) {
 			throw parser.error("Expected hexadecimal digit");
 		}
@@ -426,7 +428,7 @@ var states = {
 		parser.charCode |= parseInt(c, 16) << 4;
 		return states.escapeU4;
 	},
-	escapeU4: function(parser, c) {
+	escapeU4: function (parser, c) {
 		if (c === null || !HEX.test(c)) {
 			throw parser.error("Expected hexadecimal digit");
 		}
@@ -444,7 +446,7 @@ var states = {
 };
 
 var keywords = {
-	doctype: function(parser, c) {
+	doctype: function (parser, c) {
 		parser.context.children.push({
 			type: "string",
 			value: new CodeBlock().addText("<!DOCTYPE html>"),
@@ -457,7 +459,7 @@ var keywords = {
 
 		return states.content(parser, c);
 	},
-	include: function(parser, c) {
+	include: function (parser, c) {
 		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
@@ -492,13 +494,13 @@ var keywords = {
 
 		return leadingWhitespace(parser, c);
 	},
-	extends: function(parser, c) {
+	extends: function (parser, c) {
 		if (parser.root.children.length || parser.root.extends) {
 			throw parser.error("extends must appear first in a template");
 		}
 
 		parser.root.children = {
-			push: function() {
+			push: function () {
 				throw parser.error("A template that extends another can only contain block actions directly");
 			}
 		};
@@ -531,7 +533,7 @@ var keywords = {
 
 		return leadingWhitespace(parser, c);
 	},
-	block: function(parser, c) {
+	block: function (parser, c) {
 		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
@@ -571,7 +573,7 @@ var keywords = {
 
 		return leadingWhitespace(parser, c);
 	},
-	replace: function(parser, c) {
+	replace: function (parser, c) {
 		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
@@ -595,7 +597,7 @@ var keywords = {
 					indent: parser.indent
 				};
 
-				var action = function(block) {
+				var action = function (block) {
 					block.children = newBlock.children;
 				};
 
@@ -616,7 +618,7 @@ var keywords = {
 
 		return leadingWhitespace(parser, c);
 	},
-	append: function(parser, c) {
+	append: function (parser, c) {
 		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
@@ -640,7 +642,7 @@ var keywords = {
 					indent: parser.indent
 				};
 
-				var action = function(block) {
+				var action = function (block) {
 					push.apply(block.children, newBlock.children);
 				};
 
@@ -661,7 +663,7 @@ var keywords = {
 
 		return leadingWhitespace(parser, c);
 	},
-	if: function(parser, c) {
+	if: function (parser, c) {
 		var condition_ = "";
 
 		function leadingWhitespace(parser, c) {
@@ -703,7 +705,7 @@ var keywords = {
 
 		return leadingWhitespace(parser, c);
 	},
-	elif: function(parser, c) {
+	elif: function (parser, c) {
 		var condition_ = "";
 
 		var previous = parser.context.children && parser.context.children[parser.context.children.length - 1];
@@ -750,7 +752,7 @@ var keywords = {
 
 		return leadingWhitespace(parser, c);
 	},
-	else: function(parser, c) {
+	else: function (parser, c) {
 		var previous = parser.context.children && parser.context.children[parser.context.children.length - 1];
 
 		if (!previous || previous.type !== "if" || previous.else) {
@@ -772,7 +774,7 @@ var keywords = {
 
 		return states.content(parser, c);
 	},
-	for: function(parser, c) {
+	for: function (parser, c) {
 		var collection_ = "";
 
 		function leadingWhitespace(parser, c) {
@@ -959,12 +961,12 @@ function parse(template, options) {
 			line: 1,
 			character: 0
 		},
-		error: function(message, position) {
+		error: function (message, position) {
 			position = position || parser.position;
 			var where = eof ? "EOF" : "line " + position.line + ", character " + position.character;
 			return new SyntaxError(message + " at " + where + " in " + options.name + ".");
 		},
-		warn: function(message) {
+		warn: function (message) {
 			if (options.debug) {
 				var where = eof ? "EOF" : "line " + parser.position.line + ", character " + parser.position.character;
 				console.warn("⚠ %s at %s in %s.", message, where, options.name);

@@ -1,30 +1,33 @@
 "use strict";
 
 function escapeLiteral(text) {
-	return text.replace(/\\/g, "\\\\")
-	           .replace(/'/g, "\\'")
-	           .replace(/\r/g, "\\r")
-	           .replace(/\n/g, "\\n")
-	           .replace(/\u2028/g, "\\u2028")
-	           .replace(/\u2029/g, "\\u2029");
+	return text
+		.replace(/\\/g, "\\\\")
+		.replace(/'/g, "\\'")
+		.replace(/\r/g, "\\r")
+		.replace(/\n/g, "\\n")
+		.replace(/\u2028/g, "\\u2028")
+		.replace(/\u2029/g, "\\u2029");
 }
 
 function escapeAttributeValue(value) {
-	return ("" + value).replace(/&/g, "&amp;")
-	                   .replace(/"/g, "&quot;");
+	return ("" + value)
+		.replace(/&/g, "&amp;")
+		.replace(/"/g, "&quot;");
 }
 
 function escapeContent(value) {
-	return ("" + value).replace(/&/g, "&amp;")
-	                   .replace(/</g, "&lt;")
-	                   .replace(/>/g, "&gt;");
+	return ("" + value)
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
 }
 
 function CodeBlock() {
 	this.parts = [];
 }
 
-CodeBlock.prototype.addText = function(text) {
+CodeBlock.prototype.addText = function (text) {
 	this.parts.push({
 		type: "text",
 		value: text
@@ -33,7 +36,7 @@ CodeBlock.prototype.addText = function(text) {
 	return this;
 };
 
-CodeBlock.prototype.addExpression = function(escapeFunction, expression) {
+CodeBlock.prototype.addExpression = function (escapeFunction, expression) {
 	this.parts.push({
 		type: "expression",
 		escapeFunction: escapeFunction,
@@ -43,7 +46,7 @@ CodeBlock.prototype.addExpression = function(escapeFunction, expression) {
 	return this;
 };
 
-CodeBlock.prototype.addCode = function(code) {
+CodeBlock.prototype.addCode = function (code) {
 	this.parts.push({
 		type: "code",
 		value: code
@@ -52,13 +55,13 @@ CodeBlock.prototype.addCode = function(code) {
 	return this;
 };
 
-CodeBlock.prototype.addBlock = function(block) {
+CodeBlock.prototype.addBlock = function (block) {
 	Array.prototype.push.apply(this.parts, block.parts);
 
 	return this;
 };
 
-CodeBlock.prototype.toCode = function(outputVariable, initialState) {
+CodeBlock.prototype.toCode = function (outputVariable, initialState) {
 	var code = "";
 	var currentType = initialState;
 

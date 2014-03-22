@@ -68,7 +68,7 @@ function passes(test) {
 	var output, error, errorMessage;
 
 	var options = {
-		load: function(name) {
+		load: function (name) {
 			return parser.parse(test.include[name], options);
 		},
 		debug: true

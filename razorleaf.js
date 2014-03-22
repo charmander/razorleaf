@@ -37,7 +37,7 @@ function compile(template, options) {
 function DirectoryLoader(root, options) {
 	var loader = this;
 	var loaderOptions = {
-		load: function(name) {
+		load: function (name) {
 			return parser.parse(loader.read(name), combine(defaults, loaderOptions, { name: name }, loader.options));
 		}
 	};
@@ -47,11 +47,11 @@ function DirectoryLoader(root, options) {
 	this.options = combine(loaderOptions, options);
 }
 
-DirectoryLoader.prototype.read = function(name) {
+DirectoryLoader.prototype.read = function (name) {
 	return fs.readFileSync(path.join(this.root, name + ".leaf"), "utf-8");
 };
 
-DirectoryLoader.prototype.load = function(name) {
+DirectoryLoader.prototype.load = function (name) {
 	return compile(this.read(name), this.options);
 };
 
