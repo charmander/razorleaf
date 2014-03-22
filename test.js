@@ -70,8 +70,7 @@ function passes(test) {
 	var options = {
 		load: function (name) {
 			return parser.parse(test.include[name], options);
-		},
-		debug: true
+		}
 	};
 
 	try {

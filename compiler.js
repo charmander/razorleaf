@@ -297,6 +297,10 @@ function compile(tree, options) {
 		"var " + outputVariable + " = '" + context.content.toCode(outputVariable, "text") +
 		"\n\nreturn " + outputVariable + ";";
 
+	if (options.debug) {
+		console.log(code);
+	}
+
 	// jshint evil: true
 	return new Function("data", code);
 }
