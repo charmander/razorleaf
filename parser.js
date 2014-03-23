@@ -987,9 +987,15 @@ function parse(template, options) {
 	for (i = 0; i < template.length; i++) {
 		var c = template.charAt(i);
 
-		if (c === "\n") {
+		if (c === "\n" || c === "\r") {
 			parser.position.line++;
 			parser.position.character = 0;
+
+			if (c === "\r" && template.charAt(i + 1) === "\n") {
+				i++;
+			}
+
+			c = "\n";
 		}
 
 		state = state(parser, c);

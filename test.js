@@ -68,6 +68,11 @@ var tests = [
 		name: "modifying blocks in root template",
 		template: 'replace a',
 		expected: { error: "Unexpected block replacement in a root template" }
+	},
+	{
+		name: "carriage return/newline combination",
+		template: 'hello\r\n\tworld',
+		expected: { output: '<hello><world></world></hello>' }
 	}
 ];
 
