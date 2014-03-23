@@ -3,6 +3,8 @@
 var razorleaf = require("./");
 var parser = require("./parser");
 
+var PARSER_ERROR_MESSAGE = /^(.+) at line \d+, character \d+ in <Razor Leaf template>\./;
+
 var tests = [
 	{
 		name: "escaped double-quotes",
@@ -61,6 +63,11 @@ var tests = [
 		name: "non-conflicting variable in nested loops with index",
 		template: 'for x, i of [1, 2, 3]\n\tfor y, i of [4, 5, 6]\n\t\tfor z, i of [7, 8, 9]\n\t\t\t"#{i}"',
 		expected: { output: "012012012012012012012012012" }
+	},
+	{
+		name: "modifying blocks in root template",
+		template: 'replace a',
+		expected: { error: "Unexpected block replacement in a root template" }
 	}
 ];
 
@@ -76,8 +83,10 @@ function passes(test) {
 	try {
 		output = razorleaf.compile(test.template, options)(test.data);
 	} catch (e) {
+		var m = PARSER_ERROR_MESSAGE.exec(e.message);
+
 		error = e;
-		errorMessage = e.message;
+		errorMessage = m ? m[1] : e.message;
 	}
 
 	if (errorMessage === test.expected.error && output === test.expected.output) {

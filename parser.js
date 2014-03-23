@@ -574,6 +574,10 @@ var keywords = {
 		return leadingWhitespace(parser, c);
 	},
 	replace: function (parser, c) {
+		if (!parser.root.extends) {
+			throw parser.error("Unexpected block replacement in a root template");
+		}
+
 		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
@@ -619,6 +623,10 @@ var keywords = {
 		return leadingWhitespace(parser, c);
 	},
 	append: function (parser, c) {
+		if (!parser.root.extends) {
+			throw parser.error("Unexpected block appension in a root template");
+		}
+
 		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
