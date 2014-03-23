@@ -42,185 +42,152 @@ function describe(c) {
 	return require("./unicode")[c.charCodeAt(0)] || JSON.stringify(c);
 }
 
-var states = {
-	indent: function (parser, c) {
-		if (c === null && parser.indentString) {
-			parser.warn("Trailing whitespace");
-			return;
+function indentState(parser, c) {
+	if (c === null && parser.indentString) {
+		parser.warn("Trailing whitespace");
+		return;
+	}
+
+	if (c === "\n") {
+		if (parser.indentString) {
+			parser.warn("Whitespace-only line");
 		}
 
-		if (c === "\n") {
-			if (parser.indentString) {
-				parser.warn("Whitespace-only line");
-			}
+		parser.indentString = "";
+		return indentState;
+	}
 
-			parser.indentString = "";
-			return states.indent;
+	if (c === "\t") {
+		if (parser.indentType && parser.indentType.indentCharacter !== "\t") {
+			throw parser.error("Unexpected tab indent; indent was already determined to be " + parser.indentType.name + " by line " + parser.indentType.determined.line + ", character " + parser.indentType.determined.character);
 		}
-
-		if (c === "\t") {
-			if (parser.indentType && parser.indentType.indentCharacter !== "\t") {
-				throw parser.error("Unexpected tab indent; indent was already determined to be " + parser.indentType.name + " by line " + parser.indentType.determined.line + ", character " + parser.indentType.determined.character);
-			}
-		} else if (c !== " ") {
-			if (!parser.indentString) {
-				parser.indent = 0;
-			} else if (parser.indentType) {
-				if (parser.indentType.indentCharacter === "\t") {
-					var i = parser.indentString.indexOf(" ");
-					parser.indent = i === -1 ? parser.indentString.length : i;
-				} else {
-					var level = parser.indentString.length / parser.indentType.spaces;
-
-					if (level !== (level | 0)) {
-						throw parser.error("Invalid indent level " + level + "; indent was determined to be " + parser.indentType.name + " by line " + parser.indentType.determined.line + ", character " + parser.indentType.determined.character);
-					}
-
-					parser.indent = level;
-				}
+	} else if (c !== " ") {
+		if (!parser.indentString) {
+			parser.indent = 0;
+		} else if (parser.indentType) {
+			if (parser.indentType.indentCharacter === "\t") {
+				var i = parser.indentString.indexOf(" ");
+				parser.indent = i === -1 ? parser.indentString.length : i;
 			} else {
-				parser.indent = 1;
+				var level = parser.indentString.length / parser.indentType.spaces;
 
-				if (parser.indentString.charAt(0) === "\t") {
-					parser.indentType = {
-						indentCharacter: "\t",
-						name: "one tab"
-					};
-				} else {
-					parser.indentType = {
-						indentCharacter: " ",
-						name: parser.indentString.length + " space" + (parser.indentString.length === 1 ? "" : "s"),
-						spaces: parser.indentString.length
-					};
+				if (level !== (level | 0)) {
+					throw parser.error("Invalid indent level " + level + "; indent was determined to be " + parser.indentType.name + " by line " + parser.indentType.determined.line + ", character " + parser.indentType.determined.character);
 				}
 
-				parser.indentType.determined = {
-					line: parser.position.line,
-					character: parser.position.character
+				parser.indent = level;
+			}
+		} else {
+			parser.indent = 1;
+
+			if (parser.indentString.charAt(0) === "\t") {
+				parser.indentType = {
+					indentCharacter: "\t",
+					name: "one tab"
+				};
+			} else {
+				parser.indentType = {
+					indentCharacter: " ",
+					name: parser.indentString.length + " space" + (parser.indentString.length === 1 ? "" : "s"),
+					spaces: parser.indentString.length
 				};
 			}
 
-			if (parser.indent > parser.context.indent + 1) {
-				throw parser.error("Excessive indent " + parser.indent + "; expected " + (parser.context.indent + 1) + " or smaller");
-			}
-
-			while (parser.context.indent >= parser.indent) {
-				parser.context = parser.context.parent;
-			}
-
-			return states.content(parser, c);
-		}
-
-		parser.indentString += c;
-		return states.indent;
-	},
-	content: function (parser, c) {
-		if (c === null) {
-			return;
-		}
-
-		if (parser.context.type === "attribute") {
-			if (c === "!") {
-				throw parser.error("Attributes cannot have raw strings for values");
-			}
-
-			if (c !== " " && c !== '"') {
-				parser.context = parser.context.parent;
-			}
-		}
-
-		if (c === "\n") {
-			parser.indentString = "";
-			return states.indent;
-		}
-
-		if (c === " ") {
-			return states.content;
-		}
-
-		if (c === ".") {
-			parser.identifier = "";
-			return states.className;
-		}
-
-		if (c === "!") {
-			parser.string = new CodeBlock();
-			parser.escapeFunction = null;
-			return states.rawString;
-		}
-
-		if (c === '"') {
-			parser.string = new CodeBlock();
-			parser.escapeFunction = parser.context.type === "attribute" ? "escapeAttributeValue" : "escapeContent";
-			return states.string;
-		}
-
-		if (c === "#") {
-			return states.comment;
-		}
-
-		if (c === "%") {
-			parser.code = "";
-			return states.code;
-		}
-
-		if (IDENTIFIER.test(c)) {
-			parser.identifier = "";
-			return states.identifier(parser, c);
-		}
-
-		throw parser.error("Unexpected " + describe(c));
-	},
-	comment: function (parser, c) {
-		if (c === null || c === "\n") {
-			return states.content(parser, c);
-		}
-
-		return states.comment;
-	},
-	code: function (parser, c) {
-		if (c === null || c === "\n") {
-			parser.context = {
-				type: "code",
-				code: parser.code.trim(),
-				parent: parser.context,
-				children: [],
-				indent: parser.indent,
-				position: {
-					line: parser.position.line,
-					character: parser.position.character
-				}
+			parser.indentType.determined = {
+				line: parser.position.line,
+				character: parser.position.character
 			};
-
-			parser.context.parent.children.push(parser.context);
-
-			return states.content(parser, c);
 		}
 
-		parser.code += c;
-		return states.code;
-	},
-	identifier: function (parser, c) {
-		if (c === ":") {
-			return states.possibleAttribute;
+		if (parser.indent > parser.context.indent + 1) {
+			throw parser.error("Excessive indent " + parser.indent + "; expected " + (parser.context.indent + 1) + " or smaller");
 		}
 
-		if (c !== null && IDENTIFIER.test(c)) {
-			parser.identifier += c;
-			return states.identifier;
+		while (parser.context.indent >= parser.indent) {
+			parser.context = parser.context.parent;
 		}
 
-		if (keywords.hasOwnProperty(parser.identifier)) {
-			return keywords[parser.identifier](parser, c);
+		return contentState(parser, c);
+	}
+
+	parser.indentString += c;
+	return indentState;
+}
+
+function contentState(parser, c) {
+	if (c === null) {
+		return;
+	}
+
+	if (parser.context.type === "attribute") {
+		if (c === "!") {
+			throw parser.error("Attributes cannot have raw strings for values");
 		}
 
+		if (c !== " " && c !== '"') {
+			parser.context = parser.context.parent;
+		}
+	}
+
+	if (c === "\n") {
+		parser.indentString = "";
+		return indentState;
+	}
+
+	if (c === " ") {
+		return contentState;
+	}
+
+	if (c === ".") {
+		parser.identifier = "";
+		return classNameState;
+	}
+
+	if (c === "!") {
+		parser.string = new CodeBlock();
+		parser.escapeFunction = null;
+		return rawStringState;
+	}
+
+	if (c === '"') {
+		parser.string = new CodeBlock();
+		parser.escapeFunction = parser.context.type === "attribute" ? "escapeAttributeValue" : "escapeContent";
+		return stringState;
+	}
+
+	if (c === "#") {
+		return commentState;
+	}
+
+	if (c === "%") {
+		parser.code = "";
+		return codeState;
+	}
+
+	if (IDENTIFIER.test(c)) {
+		parser.identifier = "";
+		return identifierState(parser, c);
+	}
+
+	throw parser.error("Unexpected " + describe(c));
+}
+
+function commentState(parser, c) {
+	if (c === null || c === "\n") {
+		return contentState(parser, c);
+	}
+
+	return commentState;
+}
+
+function codeState(parser, c) {
+	if (c === null || c === "\n") {
 		parser.context = {
-			type: "element",
-			name: parser.identifier,
+			type: "code",
+			code: parser.code.trim(),
 			parent: parser.context,
 			children: [],
 			indent: parser.indent,
-			unexpected: parser.error("Unexpected element"),
 			position: {
 				line: parser.position.line,
 				character: parser.position.character
@@ -229,221 +196,269 @@ var states = {
 
 		parser.context.parent.children.push(parser.context);
 
-		return states.content(parser, c);
-	},
-	className: function (parser, c) {
-		if (c !== null && IDENTIFIER.test(c)) {
-			parser.identifier += c;
-			return states.className;
-		}
-
-		if (!parser.identifier) {
-			throw parser.error("Expected class name");
-		}
-
-		parser.context.children.push({
-			type: "class",
-			value: parser.identifier,
-			parent: parser.context,
-			unexpected: parser.error("Unexpected class"),
-			position: {
-				line: parser.position.line,
-				character: parser.position.character
-			}
-		});
-
-		return states.content(parser, c);
-	},
-	possibleAttribute: function (parser, c) {
-		if (c !== null && IDENTIFIER.test(c)) {
-			parser.identifier += ":" + c;
-			return states.identifier;
-		}
-
-		if (c === ":") {
-			parser.identifier += ":";
-			return states.possibleAttribute;
-		}
-
-		parser.context = {
-			type: "attribute",
-			name: parser.identifier,
-			value: null,
-			parent: parser.context,
-			unexpected: parser.error("Unexpected attribute"),
-			position: {
-				line: parser.position.line,
-				character: parser.position.character
-			}
-		};
-
-		parser.context.parent.children.push(parser.context);
-
-		return states.content;
-	},
-	rawString: function (parser, c) {
-		if (c !== '"') {
-			throw parser.error("Expected beginning quote of raw string, not " + describe(c));
-		}
-
-		return states.string;
-	},
-	string: function (parser, c) {
-		if (c === null) {
-			throw parser.error("Expected end of string before end of file");
-		}
-
-		if (c === '"') {
-			var string = {
-				type: "string",
-				value: parser.string,
-				parent: parser.context,
-				unexpected: parser.error("Unexpected string"),
-				position: {
-					line: parser.position.line,
-					character: parser.position.character
-				}
-			};
-
-			if (parser.context.type === "attribute") {
-				parser.context.value = string;
-				parser.context = parser.context.parent;
-			} else {
-				parser.context.children.push(string);
-			}
-
-			return states.content;
-		}
-
-		if (c === "#") {
-			return states.stringPound;
-		}
-
-		if (c === "\\") {
-			return states.escape;
-		}
-
-		if (parser.escapeFunction) {
-			parser.string.addText(utilities[parser.escapeFunction](c));
-		} else {
-			parser.string.addText(c);
-		}
-
-		return states.string;
-	},
-	stringPound: function (parser, c) {
-		if (c === "{") {
-			parser.interpolation = "";
-			return states.interpolation;
-		}
-
-		parser.string.addText("#");
-		return states.string(parser, c);
-	},
-	interpolation: function (parser, c) {
-		if (c === null) {
-			throw parser.error("Interpolated section never resolves to a valid JavaScript expression"); // TODO: Where did it start?
-		}
-
-		if (c === "}" && isExpression(parser.interpolation)) {
-			var interpolation = POSSIBLE_COMMENT.test(parser.interpolation) ? parser.interpolation + "\n" : parser.interpolation;
-			parser.string.addExpression(parser.escapeFunction, interpolation);
-			return states.string;
-		}
-
-		parser.interpolation += c;
-		return states.interpolation;
-	},
-	escape: function (parser, c) {
-		if (c === null) {
-			throw parser.error("Expected escape character");
-		}
-
-		if (c === "#" || c === '"') {
-			parser.string.addText(c);
-			return states.string;
-		}
-
-		if (c === "x") {
-			return states.escapeX1;
-		}
-
-		if (c === "u") {
-			return states.escapeU1;
-		}
-
-		if (singleCharEscapes.hasOwnProperty(c)) {
-			parser.string.addText(singleCharEscapes[c]);
-			return states.string;
-		}
-
-		// TODO: Allow LineTerminator to be escaped?
-
-		return states.string(parser, c);
-	},
-	escapeX1: function (parser, c) {
-		if (c === null || !HEX.test(c)) {
-			throw parser.error("Expected hexadecimal digit");
-		}
-
-		parser.charCode = parseInt(c, 16) << 4;
-		return states.escapeX2;
-	},
-	escapeX2: function (parser, c) {
-		if (c === null || !HEX.test(c)) {
-			throw parser.error("Expected hexadecimal digit");
-		}
-
-		var escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
-
-		if (parser.escapeFunction) {
-			parser.string.addText(utilities[parser.escapeFunction](escapedCharacter));
-		} else {
-			parser.string.addText(escapedCharacter);
-		}
-
-		return states.string;
-	},
-	escapeU1: function (parser, c) {
-		if (c === null || !HEX.test(c)) {
-			throw parser.error("Expected hexadecimal digit");
-		}
-
-		parser.charCode = parseInt(c, 16) << 12;
-		return states.escapeU2;
-	},
-	escapeU2: function (parser, c) {
-		if (c === null || !HEX.test(c)) {
-			throw parser.error("Expected hexadecimal digit");
-		}
-
-		parser.charCode |= parseInt(c, 16) << 8;
-		return states.escapeU3;
-	},
-	escapeU3: function (parser, c) {
-		if (c === null || !HEX.test(c)) {
-			throw parser.error("Expected hexadecimal digit");
-		}
-
-		parser.charCode |= parseInt(c, 16) << 4;
-		return states.escapeU4;
-	},
-	escapeU4: function (parser, c) {
-		if (c === null || !HEX.test(c)) {
-			throw parser.error("Expected hexadecimal digit");
-		}
-
-		var escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
-
-		if (parser.escapeFunction) {
-			parser.string.addText(utilities[parser.escapeFunction](escapedCharacter));
-		} else {
-			parser.string.addText(escapedCharacter);
-		}
-
-		return states.string;
+		return contentState(parser, c);
 	}
-};
+
+	parser.code += c;
+	return codeState;
+}
+
+function identifierState(parser, c) {
+	if (c === ":") {
+		return possibleAttributeState;
+	}
+
+	if (c !== null && IDENTIFIER.test(c)) {
+		parser.identifier += c;
+		return identifierState;
+	}
+
+	if (keywords.hasOwnProperty(parser.identifier)) {
+		return keywords[parser.identifier](parser, c);
+	}
+
+	parser.context = {
+		type: "element",
+		name: parser.identifier,
+		parent: parser.context,
+		children: [],
+		indent: parser.indent,
+		unexpected: parser.error("Unexpected element"),
+		position: {
+			line: parser.position.line,
+			character: parser.position.character
+		}
+	};
+
+	parser.context.parent.children.push(parser.context);
+
+	return contentState(parser, c);
+}
+
+function classNameState(parser, c) {
+	if (c !== null && IDENTIFIER.test(c)) {
+		parser.identifier += c;
+		return classNameState;
+	}
+
+	if (!parser.identifier) {
+		throw parser.error("Expected class name");
+	}
+
+	parser.context.children.push({
+		type: "class",
+		value: parser.identifier,
+		parent: parser.context,
+		unexpected: parser.error("Unexpected class"),
+		position: {
+			line: parser.position.line,
+			character: parser.position.character
+		}
+	});
+
+	return contentState(parser, c);
+}
+
+function possibleAttributeState(parser, c) {
+	if (c !== null && IDENTIFIER.test(c)) {
+		parser.identifier += ":" + c;
+		return identifierState;
+	}
+
+	if (c === ":") {
+		parser.identifier += ":";
+		return possibleAttributeState;
+	}
+
+	parser.context = {
+		type: "attribute",
+		name: parser.identifier,
+		value: null,
+		parent: parser.context,
+		unexpected: parser.error("Unexpected attribute"),
+		position: {
+			line: parser.position.line,
+			character: parser.position.character
+		}
+	};
+
+	parser.context.parent.children.push(parser.context);
+
+	return contentState;
+}
+
+function rawStringState(parser, c) {
+	if (c !== '"') {
+		throw parser.error("Expected beginning quote of raw string, not " + describe(c));
+	}
+
+	return stringState;
+}
+
+function stringState(parser, c) {
+	if (c === null) {
+		throw parser.error("Expected end of string before end of file");
+	}
+
+	if (c === '"') {
+		var string = {
+			type: "string",
+			value: parser.string,
+			parent: parser.context,
+			unexpected: parser.error("Unexpected string"),
+			position: {
+				line: parser.position.line,
+				character: parser.position.character
+			}
+		};
+
+		if (parser.context.type === "attribute") {
+			parser.context.value = string;
+			parser.context = parser.context.parent;
+		} else {
+			parser.context.children.push(string);
+		}
+
+		return contentState;
+	}
+
+	if (c === "#") {
+		return stringPoundState;
+	}
+
+	if (c === "\\") {
+		return escapeState;
+	}
+
+	if (parser.escapeFunction) {
+		parser.string.addText(utilities[parser.escapeFunction](c));
+	} else {
+		parser.string.addText(c);
+	}
+
+	return stringState;
+}
+
+function stringPoundState(parser, c) {
+	if (c === "{") {
+		parser.interpolation = "";
+		return interpolationState;
+	}
+
+	parser.string.addText("#");
+	return stringState(parser, c);
+}
+
+function interpolationState(parser, c) {
+	if (c === null) {
+		throw parser.error("Interpolated section never resolves to a valid JavaScript expression"); // TODO: Where did it start?
+	}
+
+	if (c === "}" && isExpression(parser.interpolation)) {
+		var interpolation = POSSIBLE_COMMENT.test(parser.interpolation) ? parser.interpolation + "\n" : parser.interpolation;
+		parser.string.addExpression(parser.escapeFunction, interpolation);
+		return stringState;
+	}
+
+	parser.interpolation += c;
+	return interpolationState;
+}
+
+function escapeState(parser, c) {
+	if (c === null) {
+		throw parser.error("Expected escape character");
+	}
+
+	if (c === "#" || c === '"') {
+		parser.string.addText(c);
+		return stringState;
+	}
+
+	if (c === "x") {
+		return escapeX1;
+	}
+
+	if (c === "u") {
+		return escapeU1;
+	}
+
+	if (singleCharEscapes.hasOwnProperty(c)) {
+		parser.string.addText(singleCharEscapes[c]);
+		return stringState;
+	}
+
+	// TODO: Allow LineTerminator to be escaped?
+
+	return stringState(parser, c);
+}
+
+function escapeX1(parser, c) {
+	if (c === null || !HEX.test(c)) {
+		throw parser.error("Expected hexadecimal digit");
+	}
+
+	parser.charCode = parseInt(c, 16) << 4;
+	return escapeX2;
+}
+
+function escapeX2(parser, c) {
+	if (c === null || !HEX.test(c)) {
+		throw parser.error("Expected hexadecimal digit");
+	}
+
+	var escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
+
+	if (parser.escapeFunction) {
+		parser.string.addText(utilities[parser.escapeFunction](escapedCharacter));
+	} else {
+		parser.string.addText(escapedCharacter);
+	}
+
+	return stringState;
+}
+
+function escapeU1(parser, c) {
+	if (c === null || !HEX.test(c)) {
+		throw parser.error("Expected hexadecimal digit");
+	}
+
+	parser.charCode = parseInt(c, 16) << 12;
+	return escapeU2;
+}
+
+function escapeU2(parser, c) {
+	if (c === null || !HEX.test(c)) {
+		throw parser.error("Expected hexadecimal digit");
+	}
+
+	parser.charCode |= parseInt(c, 16) << 8;
+	return escapeU3;
+}
+
+function escapeU3(parser, c) {
+	if (c === null || !HEX.test(c)) {
+		throw parser.error("Expected hexadecimal digit");
+	}
+
+	parser.charCode |= parseInt(c, 16) << 4;
+	return escapeU4;
+}
+
+function escapeU4(parser, c) {
+	if (c === null || !HEX.test(c)) {
+		throw parser.error("Expected hexadecimal digit");
+	}
+
+	var escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
+
+	if (parser.escapeFunction) {
+		parser.string.addText(utilities[parser.escapeFunction](escapedCharacter));
+	} else {
+		parser.string.addText(escapedCharacter);
+	}
+
+	return stringState;
+}
 
 var keywords = {
 	doctype: function (parser, c) {
@@ -457,7 +472,7 @@ var keywords = {
 			}
 		});
 
-		return states.content(parser, c);
+		return contentState(parser, c);
 	},
 	include: function (parser, c) {
 		function leadingWhitespace(parser, c) {
@@ -485,7 +500,7 @@ var keywords = {
 					}
 				});
 
-				return states.content(parser, c);
+				return contentState(parser, c);
 			}
 
 			parser.identifier += c;
@@ -524,7 +539,7 @@ var keywords = {
 			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
 				parser.root.extends = parser.identifier;
 
-				return states.content(parser, c);
+				return contentState(parser, c);
 			}
 
 			parser.identifier += c;
@@ -564,7 +579,7 @@ var keywords = {
 				parser.context.parent.children.push(parser.context);
 				parser.root.blocks[parser.identifier] = parser.context;
 
-				return states.content(parser, c);
+				return contentState(parser, c);
 			}
 
 			parser.identifier += c;
@@ -613,7 +628,7 @@ var keywords = {
 
 				parser.context = newBlock;
 
-				return states.content(parser, c);
+				return contentState(parser, c);
 			}
 
 			parser.identifier += c;
@@ -662,7 +677,7 @@ var keywords = {
 
 				parser.context = newBlock;
 
-				return states.content(parser, c);
+				return contentState(parser, c);
 			}
 
 			parser.identifier += c;
@@ -704,7 +719,7 @@ var keywords = {
 
 				parser.context.parent.children.push(parser.context);
 
-				return states.content(parser, c);
+				return contentState(parser, c);
 			}
 
 			condition_ += c;
@@ -751,7 +766,7 @@ var keywords = {
 				previous.elif.push(elif);
 				parser.context = elif;
 
-				return states.content(parser, c);
+				return contentState(parser, c);
 			}
 
 			condition_ += c;
@@ -780,7 +795,7 @@ var keywords = {
 
 		parser.context = previous.else;
 
-		return states.content(parser, c);
+		return contentState(parser, c);
 	},
 	for: function (parser, c) {
 		var collection_ = "";
@@ -925,7 +940,7 @@ var keywords = {
 
 				parser.context.parent.children.push(parser.context);
 
-				return states.content(parser, c);
+				return contentState(parser, c);
 			}
 
 			collection_ += c;
@@ -982,7 +997,7 @@ function parse(template, options) {
 		}
 	});
 
-	var state = states.indent;
+	var state = indentState;
 
 	for (i = 0; i < template.length; i++) {
 		var c = template.charAt(i);
@@ -1044,5 +1059,4 @@ function parse(template, options) {
 
 module.exports.constructor = { name: "razorleaf.parser" };
 module.exports.parse = parse;
-module.exports.states = states;
 module.exports.keywords = keywords;
