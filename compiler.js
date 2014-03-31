@@ -1,5 +1,6 @@
 "use strict";
 
+var vm = require("vm");
 var utilities = require("./utilities");
 var CodeBlock = utilities.CodeBlock;
 
@@ -301,8 +302,10 @@ function compile(tree, options) {
 		console.log(code);
 	}
 
-	// jshint evil: true
-	return new Function("data", code);
+	return vm.runInNewContext(
+		"(function template(data) {\n" + code + "\n})",
+		options.globals, options.name
+	);
 }
 
 module.exports.constructor = { name: "razorleaf.compiler" };

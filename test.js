@@ -73,8 +73,31 @@ var tests = [
 		name: "carriage return/newline combination",
 		template: 'hello\r\n\tworld',
 		expected: { output: '<hello><world></world></hello>' }
+	},
+	{
+		name: "globals",
+		template: '"#{data.count} red balloon#{s(data.count)}"',
+		data: { count: 99 },
+		options: {
+			globals: {
+				s: function (n) {
+					return n === 1 ? '' : 's';
+				}
+			}
+		},
+		expected: { output: '99 red balloons' }
 	}
 ];
+
+function extend(a, b) {
+	for (var k in b) {
+		if (b.hasOwnProperty(k)) {
+			a[k] = b[k];
+		}
+	}
+
+	return a;
+}
 
 function passes(test) {
 	var output, error, errorMessage;
@@ -86,7 +109,7 @@ function passes(test) {
 	};
 
 	try {
-		output = razorleaf.compile(test.template, options)(test.data);
+		output = razorleaf.compile(test.template, extend(options, test.options))(test.data);
 	} catch (e) {
 		var m = PARSER_ERROR_MESSAGE.exec(e.message);
 
