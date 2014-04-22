@@ -52,7 +52,7 @@ DirectoryLoader.prototype.read = function (name) {
 };
 
 DirectoryLoader.prototype.load = function (name) {
-	return compile(this.read(name), this.options);
+	return compile(this.read(name), combine(this.options, { name: name }));
 };
 
 module.exports.constructor = { name: "razorleaf" };
