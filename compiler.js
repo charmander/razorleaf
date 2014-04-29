@@ -292,9 +292,6 @@ function compile(tree, options) {
 	var outputVariable = scope.getName("output");
 
 	var code =
-		"'use strict';\n\n" +
-		utilities.escapeAttributeValue + "\n" +
-		utilities.escapeContent + "\n\n" +
 		"var " + outputVariable + " = '" + context.content.toCode(outputVariable, "text") +
 		"\n\nreturn " + outputVariable + ";";
 
@@ -303,6 +300,9 @@ function compile(tree, options) {
 	}
 
 	return vm.runInNewContext(
+		"'use strict';\n" +
+		utilities.escapeAttributeValue + "\n" +
+		utilities.escapeContent + "\n\n" +
 		"(function template(data) {\n" + code + "\n})",
 		options.globals, options.name
 	);
