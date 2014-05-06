@@ -12,6 +12,11 @@ var tests = [
 		expected: { output: 'println!("Hello, world!")' }
 	},
 	{
+		name: "comment after boolean attribute",
+		template: 'div\n\tdata-test:\n\t# comment',
+		expected: { output: '<div data-test></div>' }
+	},
+	{
 		name: "non-conflicting output variable",
 		template: '% var output;\n"#{typeof output}"',
 		expected: { output: "undefined" }
