@@ -284,7 +284,7 @@ function possibleAttributeState(parser, c) {
 
 	parser.context.parent.children.push(parser.context);
 
-	return contentState;
+	return contentState(parser, c);
 }
 
 function rawStringState(parser, c) {
