@@ -195,36 +195,43 @@ var transform = {
 		(context.attributes || context.content).addCode("var " + conditionName + " = (" + condition + ");");
 		condition = conditionName;
 
-		if (newContext.attributes && newContext.attributes.parts.length) {
+		var hasIfAttributes = newContext.attributes && newContext.attributes.parts.length;
+		var hasElseAttributes = elseContext && elseContext.attributes && elseContext.attributes.parts.length;
+		var hasIfClasses = newContext.classes && newContext.classes.parts.length;
+		var hasElseClasses = elseContext && elseContext.classes && elseContext.classes.parts.length;
+		var hasIfContent = newContext.content && newContext.content.parts.length;
+		var hasElseContent = elseContext && elseContext.content && elseContext.content.parts.length;
+
+		if (hasIfAttributes || hasElseAttributes) {
 			context.attributes.addCode("if (" + condition + ") {");
 			context.attributes.addBlock(newContext.attributes);
 			context.attributes.addCode("}");
 
-			if (elseContext && elseContext.attributes.parts.length) {
+			if (hasElseAttributes) {
 				context.attributes.addCode("else {");
 				context.attributes.addBlock(elseContext.attributes);
 				context.attributes.addCode("}");
 			}
 		}
 
-		if (newContext.classes && newContext.classes.parts.length) {
+		if (hasIfClasses || hasElseClasses) {
 			context.classes.addCode("if (" + condition + ") {");
 			context.classes.addBlock(newContext.classes);
 			context.classes.addCode("}");
 
-			if (elseContext && elseContext.classes.parts.length) {
+			if (hasElseClasses) {
 				context.classes.addCode("else {");
 				context.classes.addBlock(elseContext.classes);
 				context.classes.addCode("}");
 			}
 		}
 
-		if (newContext.content.parts.length) {
+		if (hasIfContent || hasElseContent) {
 			context.content.addCode("if (" + condition + ") {");
 			context.content.addBlock(newContext.content);
 			context.content.addCode("}");
 
-			if (elseContext && elseContext.content.parts.length) {
+			if (hasElseContent) {
 				context.content.addCode("else {");
 				context.content.addBlock(elseContext.content);
 				context.content.addCode("}");
