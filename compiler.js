@@ -6,6 +6,10 @@ var CodeBlock = utilities.CodeBlock;
 
 var POSSIBLE_COMMENT = /\/\/|<!--/;
 
+function wrapExpression(expression) {
+	return POSSIBLE_COMMENT.test(expression) ? expression + '\n' : expression;
+}
+
 function addPossibleConflicts(possibleConflicts, code) {
 	// It isn’t possible to refer to a local variable and create a conflict
 	// in strict mode without clearly (or nearly so) specifying the variable’s name.
@@ -124,7 +128,7 @@ var transform = {
 	},
 	code: function (compiler, context, node) {
 		if (node.children.length) {
-			context.content.addCode(node.code + (POSSIBLE_COMMENT.test(node.code) ? "\n{" : " {"));
+			context.content.addCode(wrapExpression(node.code) + " {");
 
 			var newContext = {
 				content: context.content
@@ -136,7 +140,7 @@ var transform = {
 
 			context.content.addCode("}");
 		} else {
-			context.content.addCode(node.code + (POSSIBLE_COMMENT.test(node.code) ? "\n;" : ";"));
+			context.content.addCode(wrapExpression(node.code) + ";");
 		}
 
 		addPossibleConflicts(compiler.possibleConflicts, node.code);
@@ -147,7 +151,7 @@ var transform = {
 		compileNode(compiler, context, subtree);
 	},
 	if: function (compiler, context, node) {
-		var condition = POSSIBLE_COMMENT.test(node.condition) ? node.condition + "\n" : node.condition;
+		var condition = wrapExpression(node.condition);
 
 		var newContext = {
 			content: new CodeBlock(),
@@ -235,7 +239,7 @@ var transform = {
 		var originalName = null;
 		var index = node.indexName || compiler.scope.getName("i");
 		var collectionName = compiler.scope.getName("collection");
-		var collection = POSSIBLE_COMMENT.test(node.collection) ? node.collection + "\n" : node.collection;
+		var collection = wrapExpression(node.collection);
 
 		context.content.addCode("var " + collectionName + " = (" + collection + ");");
 
