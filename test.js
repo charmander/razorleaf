@@ -93,6 +93,11 @@ var tests = [
 		expected: { output: '99 red balloons' }
 	},
 	{
+		name: 'attributes in else after content in if',
+		template: 'div\n\tif false\n\t\t"fail"\n\telse\n\t\tdata-status: "pass"',
+		expected: { output: '<div data-status="pass"></div>' }
+	},
+	{
 		name: 'elif inside element',
 		template: 'div\n\tif false\n\t\t"foo"\n\telif true\n\t\t"bar"',
 		expected: { output: '<div>bar</div>' }
