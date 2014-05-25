@@ -91,6 +91,11 @@ var tests = [
 			}
 		},
 		expected: { output: '99 red balloons' }
+	},
+	{
+		name: 'elif inside element',
+		template: 'div\n\tif false\n\t\t"foo"\n\telif true\n\t\t"bar"',
+		expected: { output: '<div>bar</div>' }
 	}
 ];
 
