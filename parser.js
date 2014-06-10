@@ -39,7 +39,17 @@ function describe(c) {
 		return c;
 	}
 
-	return require("./unicode")[c.charCodeAt(0)] || JSON.stringify(c);
+	var code = c.charCodeAt(0);
+
+	if (code >= 0xd800 && code <= 0xdbff) {
+		var trailSurrogate = c.charCodeAt(1);
+
+		if (trailSurrogate) {
+			code = ((code - 0xd800) << 10 | (trailSurrogate - 0xdc00)) + 0x10000;
+		}
+	}
+
+	return require("./unicode")[code] || JSON.stringify(c);
 }
 
 function indentState(parser, c) {
@@ -1011,6 +1021,17 @@ function parse(template, options) {
 			}
 
 			c = "\n";
+		}
+
+		var code = template.charCodeAt(i);
+
+		if (code >= 0xd800 && code <= 0xdbff) {
+			var nextCode = template.charCodeAt(i + 1);
+
+			if (nextCode >= 0xdc00 && nextCode <= 0xdfff) {
+				c += template.charAt(i + 1);
+				i++;
+			}
 		}
 
 		state = state(parser, c);

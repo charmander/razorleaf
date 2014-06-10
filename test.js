@@ -101,6 +101,11 @@ var tests = [
 		name: 'elif inside element',
 		template: 'div\n\tif false\n\t\t"foo"\n\telif true\n\t\t"bar"',
 		expected: { output: '<div>bar</div>' }
+	},
+	{
+		name: 'character with two-byte UTF-16 representation',
+		template: '𝑎',
+		expected: { error: 'Unexpected MATHEMATICAL ITALIC SMALL A' }
 	}
 ];
 
