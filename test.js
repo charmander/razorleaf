@@ -33,7 +33,7 @@ var tests = [
 		name: "conditional attributes",
 		template: 'div "Hello, world!" \n\tif true\n\t\t.pass id: "#{data.example}"\n\tif false\n\t\t.fail data-fail: "true"',
 		data: { example: "example" },
-		expected: { output: '<div id="example" class=" pass">Hello, world!</div>' }
+		expected: { output: '<div id="example" class="pass">Hello, world!</div>' }
 	},
 	{
 		name: "reordering of mixed conditionals",

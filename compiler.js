@@ -70,6 +70,15 @@ var transform = {
 		context.content.addBlock(newContext.attributes);
 
 		if (newContext.classes.parts.length) {
+			for (var i = 0; i < newContext.classes.parts.length; i++) {
+				var part = newContext.classes.parts[i];
+
+				if (part.type === 'text') {
+					part.value = part.value.substring(1);
+					break;
+				}
+			}
+
 			context.content.addText(" class=\"");
 			context.content.addBlock(newContext.classes);
 			context.content.addText("\"");
