@@ -106,6 +106,11 @@ var tests = [
 		name: 'character with two-byte UTF-16 representation',
 		template: '𝑎',
 		expected: { error: 'Unexpected MATHEMATICAL ITALIC SMALL A' }
+	},
+	{
+		name: 'Unicode 7.0',
+		template: '\u1ab0',
+		expected: { error: 'Unexpected COMBINING DOUBLED CIRCUMFLEX ACCENT' }
 	}
 ];
 
