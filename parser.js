@@ -91,6 +91,10 @@ function indentState(parser, c) {
 			parser.indent = 1;
 
 			if (parser.indentString.charAt(0) === "\t") {
+				if (parser.indentString.length !== 1) {
+					throw parser.error("Excessive indent of " + parser.indentString.length + " tabs; one tab always represents one indent level");
+				}
+
 				parser.indentType = {
 					indentCharacter: "\t",
 					name: "one tab"

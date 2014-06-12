@@ -111,6 +111,11 @@ var tests = [
 		name: 'Unicode 7.0',
 		template: '\u1ab0',
 		expected: { error: 'Unexpected COMBINING DOUBLED CIRCUMFLEX ACCENT' }
+	},
+	{
+		name: 'Initial multiple-tab indentation',
+		template: 'div\n\t\tdiv',
+		expected: { error: 'Excessive indent of 2 tabs; one tab always represents one indent level' }
 	}
 ];
 
