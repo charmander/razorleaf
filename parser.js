@@ -578,7 +578,7 @@ var keywords = {
 
 		function identifier(parser, c) {
 			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
-				if (parser.root.blocks.hasOwnProperty(parser.identifier)) {
+				if (hasOwnProperty.call(parser.root.blocks, parser.identifier)) {
 					throw parser.error("A block named “" + parser.identifier + "” has already been defined");
 				}
 
@@ -634,7 +634,7 @@ var keywords = {
 					block.children = newBlock.children;
 				};
 
-				if (parser.root.blockActions.hasOwnProperty(parser.identifier)) {
+				if (hasOwnProperty.call(parser.root.blockActions, parser.identifier)) {
 					parser.root.blockActions[parser.identifier].push(action);
 				} else {
 					parser.root.blockActions[parser.identifier] = [action];
@@ -683,7 +683,7 @@ var keywords = {
 					push.apply(block.children, newBlock.children);
 				};
 
-				if (parser.root.blockActions.hasOwnProperty(parser.identifier)) {
+				if (hasOwnProperty.call(parser.root.blockActions, parser.identifier)) {
 					parser.root.blockActions[parser.identifier].push(action);
 				} else {
 					parser.root.blockActions[parser.identifier] = [action];
@@ -1050,8 +1050,8 @@ function parse(template, options) {
 		var blockName;
 
 		for (blockName in root.blocks) {
-			if (root.blocks.hasOwnProperty(blockName)) {
-				if (parentTemplate.blocks.hasOwnProperty(blockName)) {
+			if (hasOwnProperty.call(root.blocks, blockName)) {
+				if (hasOwnProperty.call(parentTemplate.blocks, blockName)) {
 					throw new SyntaxError("Parent template " + root.extends + " already contains a block named “" + blockName + "”.");
 				}
 
@@ -1060,8 +1060,8 @@ function parse(template, options) {
 		}
 
 		for (blockName in root.blockActions) {
-			if (root.blockActions.hasOwnProperty(blockName)) {
-				if (!parentTemplate.blocks.hasOwnProperty(blockName)) {
+			if (hasOwnProperty.call(root.blockActions, blockName)) {
+				if (!hasOwnProperty.call(parentTemplate.blocks, blockName)) {
 					throw new SyntaxError("There is no block named “" + blockName + "”.");
 				}
 

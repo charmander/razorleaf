@@ -116,6 +116,19 @@ var tests = [
 		name: 'Initial multiple-tab indentation',
 		template: 'div\n\t\tdiv',
 		expected: { error: 'Excessive indent of 2 tabs; one tab always represents one indent level' }
+	},
+	{
+		name: 'hasOwnProperty as a variable name',
+		template: '% var hasOwnProperty;\nfor x of [1, 2, 3]\n\t"#{x}"',
+		expected: { output: '123' }
+	},
+	{
+		name: 'hasOwnProperty as a block name',
+		template: 'extends layout\nreplace hasOwnProperty',
+		include: {
+			layout: 'block hasOwnProperty'
+		},
+		expected: { output: '' }
 	}
 ];
 

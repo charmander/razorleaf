@@ -33,7 +33,7 @@ function Scope() {
 }
 
 Scope.prototype.getName = function (name) {
-	while (this.used.hasOwnProperty(name)) {
+	while (hasOwnProperty.call(this.used, name)) {
 		name += "_";
 	}
 
@@ -260,7 +260,7 @@ var transform = {
 		context.content.addCode("var " + collectionName + " = (" + collection + ");");
 
 		if (node.indexName) {
-			if (compiler.scope.used.hasOwnProperty(node.indexName)) {
+			if (hasOwnProperty.call(compiler.scope.used, node.indexName)) {
 				originalName = compiler.scope.getName("original");
 
 				context.content.addCode("var " + originalName + " = " + node.indexName + ";");
