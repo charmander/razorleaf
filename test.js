@@ -113,7 +113,7 @@ var tests = [
 		expected: { error: 'Unexpected COMBINING DOUBLED CIRCUMFLEX ACCENT' }
 	},
 	{
-		name: 'Initial multiple-tab indentation',
+		name: 'initial multiple-tab indentation',
 		template: 'div\n\t\tdiv',
 		expected: { error: 'Excessive indent of 2 tabs; one tab always represents one indent level' }
 	},
