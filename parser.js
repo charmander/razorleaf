@@ -23,6 +23,8 @@ var singleCharEscapes = {
 	0: "\0"
 };
 
+var keywords;
+
 function isExpression(js) {
 	// jshint evil: true, nonew: false
 
@@ -474,7 +476,7 @@ function escapeU4(parser, c) {
 	return stringState;
 }
 
-var keywords = {
+keywords = {
 	doctype: function (parser, c) {
 		parser.context.children.push({
 			type: "string",

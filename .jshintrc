@@ -2,17 +2,18 @@
 	"camelcase": true,
 	"curly": true,
 	"eqeqeq": true,
-	"eqnull": true,
 	"forin": true,
+	"freeze": true,
 	"immed": true,
-	"indent": 1,
 	"latedef": "nofunc",
 	"newcap": true,
-	"node": true,
+	"noarg": true,
+	"noempty": true,
 	"nonew": true,
-	"strict": true,
-	"trailing": true,
 	"undef": true,
 	"unused": true,
-	"white": true
+	"strict": true,
+	"trailing": true,
+
+	"node": true
 }
