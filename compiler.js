@@ -6,6 +6,8 @@ var CodeBlock = utilities.CodeBlock;
 
 var POSSIBLE_COMMENT = /\/\/|<!--/;
 
+var voidTags = utilities.voidTags;
+
 function wrapExpression(expression) {
 	return POSSIBLE_COMMENT.test(expression) ? expression + '\n' : expression;
 }
@@ -40,11 +42,6 @@ Scope.prototype.getName = function (name) {
 	this.used[name] = true;
 	return name;
 };
-
-var voidTags = [
-	"area", "base", "br", "col", "command", "embed", "hr", "img", "input",
-	"keygen", "link", "meta", "param", "source", "track", "wbr"
-];
 
 var transform = {
 	root: passThrough,

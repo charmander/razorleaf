@@ -1,5 +1,10 @@
 "use strict";
 
+var voidTags = [
+	"area", "base", "br", "col", "command", "embed", "hr", "img", "input",
+	"keygen", "link", "meta", "param", "source", "track", "wbr"
+];
+
 function escapeLiteral(text) {
 	return text
 		.replace(/\\/g, "\\\\")
@@ -127,3 +132,4 @@ exports.constructor = { name: "razorleaf.utilities" };
 exports.escapeAttributeValue = escapeAttributeValue;
 exports.escapeContent = escapeContent;
 exports.CodeBlock = CodeBlock;
+exports.voidTags = voidTags;
