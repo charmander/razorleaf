@@ -1084,6 +1084,6 @@ function parse(template, options) {
 	return root;
 }
 
-module.exports.constructor = { name: "razorleaf.parser" };
-module.exports.parse = parse;
-module.exports.keywords = keywords;
+exports.constructor = { name: "razorleaf.parser" };
+exports.parse = parse;
+exports.keywords = keywords;

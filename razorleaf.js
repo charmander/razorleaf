@@ -55,6 +55,6 @@ DirectoryLoader.prototype.load = function (name) {
 	return compile(this.read(name), combine(this.options, { name: name }));
 };
 
-module.exports.constructor = { name: "razorleaf" };
-module.exports.compile = compile;
-module.exports.DirectoryLoader = DirectoryLoader;
+exports.constructor = { name: "razorleaf" };
+exports.compile = compile;
+exports.DirectoryLoader = DirectoryLoader;

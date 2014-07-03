@@ -328,6 +328,6 @@ function compile(tree, options) {
 	);
 }
 
-module.exports.constructor = { name: "razorleaf.compiler" };
-module.exports.compile = compile;
-module.exports.transform = transform;
+exports.constructor = { name: "razorleaf.compiler" };
+exports.compile = compile;
+exports.transform = transform;

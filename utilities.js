@@ -123,7 +123,7 @@ CodeBlock.prototype.toCode = function (outputVariable, initialState) {
 	return code;
 };
 
-module.exports.constructor = { name: "razorleaf.utilities" };
-module.exports.escapeAttributeValue = escapeAttributeValue;
-module.exports.escapeContent = escapeContent;
-module.exports.CodeBlock = CodeBlock;
+exports.constructor = { name: "razorleaf.utilities" };
+exports.escapeAttributeValue = escapeAttributeValue;
+exports.escapeContent = escapeContent;
+exports.CodeBlock = CodeBlock;
