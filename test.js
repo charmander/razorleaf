@@ -129,6 +129,14 @@ var tests = [
 			layout: 'block hasOwnProperty'
 		},
 		expected: { output: '' }
+	},
+	{
+		name: 'block substitution with attributes',
+		template: 'extends layout\nreplace content\n\t.test-pass',
+		include: {
+			layout: 'body\n\tblock content\n\t\t.test-fail'
+		},
+		expected: { output: '<body class="test-pass"></body>' }
 	}
 ];
 
