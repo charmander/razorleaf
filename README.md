@@ -120,14 +120,21 @@ and wrapped in curly braces.
 
 For example, this template:
 
-	% if (i < 5)
-		!"#{i}"
+	% function countTo(n)
+		% for (var i = 1; i <= n; i++)
+			"#{i}"
+
+	% countTo(5);
 
 might compile to this JavaScript:
 
-	if (i < 5) {
-		output += i;
+	function countTo(n) {
+		for (var i = 1; i <= n; i++) {
+			output += i;
+		}
 	}
+
+	countTo(5);
 
 ### Special blocks
 
