@@ -16,8 +16,8 @@
 		"url": "https://github.com/charmander/razorleaf"
 	},
 	"bugs": {
-		"email": "campersander@gmail.com"
+		"email": "~@charmander.me"
 	},
 	"homepage": "https://charmander.me/razorleaf/",
-	"license": "MIT"
+	"license": "ISC"
 }
