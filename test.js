@@ -118,6 +118,11 @@ var tests = [
 		expected: { error: "Unexpected COMBINING DOUBLED CIRCUMFLEX ACCENT" }
 	},
 	{
+		name: "Unicode 8.0",
+		template: "\ud83e\udd16",
+		expected: { error: "Unexpected ROBOT FACE" },
+	},
+	{
 		name: "initial multiple-tab indentation",
 		template: "div\n\t\tdiv",
 		expected: { error: "Excessive indent of 2 tabs; one tab always represents one indent level" }
