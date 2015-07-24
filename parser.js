@@ -381,10 +381,6 @@ function interpolationState(parser, c) {
 }
 
 function escapeState(parser, c) {
-	if (c === null) {
-		throw parser.error("Expected escape character");
-	}
-
 	if (c === "#" || c === '"') {
 		parser.string.addText(c);
 		return stringState;
@@ -403,9 +399,7 @@ function escapeState(parser, c) {
 		return stringState;
 	}
 
-	// TODO: Allow LineTerminator to be escaped?
-
-	return stringState(parser, c);
+	throw parser.error("Expected escape sequence");
 }
 
 function escapeX1(parser, c) {

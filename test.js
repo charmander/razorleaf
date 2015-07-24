@@ -137,7 +137,12 @@ var tests = [
 			layout: "body\n\tblock content\n\t\t.test-fail"
 		},
 		expected: { output: '<body class="test-pass"></body>' }
-	}
+	},
+	{
+		name: "invalid escape",
+		template: '"\\g"',
+		expected: { error: "Expected escape sequence" }
+	},
 ];
 
 function extend(a, b) {
