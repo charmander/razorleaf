@@ -48,7 +48,7 @@ function DirectoryLoader(root, options) {
 }
 
 DirectoryLoader.prototype.read = function (name) {
-	return fs.readFileSync(path.join(this.root, name + ".leaf"), "utf-8");
+	return fs.readFileSync(path.join(this.root, name + ".rl"), "utf-8");
 };
 
 DirectoryLoader.prototype.load = function (name) {

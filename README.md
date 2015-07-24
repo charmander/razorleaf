@@ -178,7 +178,7 @@ Some names define special blocks. These are:
 
 ### `new razorleaf.DirectoryLoader(root, [options])`
 
-Creates a loader that maps template names to files with the `.leaf` extension
+Creates a loader that maps template names to files with the `.rl` extension
 in the directory located at *`root`*.
 
 #### `razorleaf.DirectoryLoader.prototype.load(name)`
