@@ -18,10 +18,11 @@ function addPossibleConflicts(possibleConflicts, code) {
 	// Since we won’t be using any name but output_*, other letter and digit
 	// characters are not a concern. As for eval – that obviously isn’t possible to work around.
 	var JS_IDENTIFIER = /(?:[a-zA-Z_]|\\u[0-9a-fA-F])(?:\w|\\u[0-9a-fA-F])*/g;
+	var match;
 
-	code.match(JS_IDENTIFIER).forEach(function (m) {
-		possibleConflicts[JSON.parse('"' + m + '"')] = true;
-	});
+	while ((match = JS_IDENTIFIER.exec(code))) {
+		possibleConflicts[JSON.parse('"' + match[0] + '"')] = true;
+	}
 }
 
 function passThrough(compiler, context, node) {

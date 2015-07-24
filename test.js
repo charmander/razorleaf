@@ -7,6 +7,11 @@ var PARSER_ERROR_MESSAGE = /^(.+) at line \d+, character \d+ in <Razor Leaf temp
 
 var tests = [
 	{
+		name: "interpolation without identifiers",
+		template: '"#{5}"',
+		expected: { output: "5" },
+	},
+	{
 		name: "escaped double-quotes",
 		template: '"println!(\\"Hello, world!\\")"',
 		expected: { output: 'println!("Hello, world!")' }
