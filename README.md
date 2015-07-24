@@ -84,6 +84,8 @@ Classes are marked up with a leading period, as in <code>.<i>class</i></code>.
 
 Hierarchy in Razor Leaf is defined using indentation. For example:
 
+	doctype
+
 	html
 		head
 			meta charset: "utf-8"
@@ -101,7 +103,7 @@ Hierarchy in Razor Leaf is defined using indentation. For example:
 
 <!-- -->
 
-	<html><head><meta charset="utf-8"><title>Example</title><link rel="stylesheet" type="text/css" href="stylesheets/example.css"></head><body><p id="introduction">This template is a brief example of hierarchy.</p></body></html>
+	<!DOCTYPE html><html><head><meta charset="utf-8"><title>Example</title><link rel="stylesheet" type="text/css" href="stylesheets/example.css"></head><body><p id="introduction">This template is a brief example of hierarchy.</p></body></html>
 
 Content found after an element on the same line will also be considered that
 element’s content.
