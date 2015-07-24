@@ -10,19 +10,23 @@ in larger libraries.
 Elements are defined by their names only; no other special character is
 necessary.
 
-	p
+```
+p
+```
 
-<!-- -->
-
-	<p></p>
+```html
+<p></p>
+```
 
 Void elements are recognized automatically.
 
-	meta
+```
+meta
+```
 
-<!-- -->
-
-	<meta>
+```html
+<meta>
+```
 
 ### Strings
 
@@ -30,30 +34,36 @@ Strings are double-quoted and escaped for use in HTML as needed. Backslash
 escape codes can be used as in JavaScript. No whitespace is added
 around strings.
 
-	"--> A string <--\n" "A string containing \"double-quotes\""
+```
+"--> A string <--\n" "A string containing \"double-quotes\""
+```
 
-<!-- -->
-
-	--&gt; A string &lt;--
-	A string containing "double-quotes"
+```html
+--&gt; A string &lt;--
+A string containing "double-quotes"
+```
 
 Strings can also contain interpolated sections, delimited by `#{` and `}`.
 `#{` can be escaped with a leading backslash; `}` doesn’t require escaping.
 
-	"#{6 * 7}"
+```
+"#{6 * 7}"
+```
 
-<!-- -->
-
-	42
+```html
+42
+```
 
 If an exclamation mark precedes the string, it and any of its interpolated
 sections will not be escaped.
 
-	!"<!-- A significant comment -->"
+```
+!"<!-- A significant comment -->"
+```
 
-<!-- -->
-
-	<!-- A significant comment -->
+```html
+<!-- A significant comment -->
+```
 
 ### Attributes
 
@@ -63,47 +73,53 @@ its value; if a value isn’t provided, the attribute is assumed to be boolean
 (and present). Note that a string used as an attributes value cannot be “raw”
 — that is, cannot be preceded by an exclamation mark.
 
-	meta charset: "utf-8"
+```
+meta charset: "utf-8"
+```
 
-<!-- -->
-
-	<meta charset="utf-8">
+```html
+<meta charset="utf-8">
+```
 
 ### Classes
 
 Classes are marked up with a leading period, as in <code>.<i>class</i></code>.
 
-	fieldset .upload-meta
-		input.required
+```
+fieldset .upload-meta
+	input.required
+```
 
-<!-- -->
-
-	<fieldset class="upload-meta"><input class="required"></fieldset>
+```html
+<fieldset class="upload-meta"><input class="required"></fieldset>
+```
 
 ### Hierarchy
 
 Hierarchy in Razor Leaf is defined using indentation. For example:
 
-	doctype
+```
+doctype
 
-	html
-		head
-			meta charset: "utf-8"
+html
+	head
+		meta charset: "utf-8"
 
-			title "Example"
+		title "Example"
 
-			link
-				rel: "stylesheet"
-				type: "text/css"
-				href: "stylesheets/example.css"
+		link
+			rel: "stylesheet"
+			type: "text/css"
+			href: "stylesheets/example.css"
 
-		body
-			p id: "introduction"
-				"This template is a brief example of hierarchy."
+	body
+		p id: "introduction"
+			"This template is a brief example of hierarchy."
+```
 
-<!-- -->
-
-	<!DOCTYPE html><html><head><meta charset="utf-8"><title>Example</title><link rel="stylesheet" type="text/css" href="stylesheets/example.css"></head><body><p id="introduction">This template is a brief example of hierarchy.</p></body></html>
+```html
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Example</title><link rel="stylesheet" type="text/css" href="stylesheets/example.css"></head><body><p id="introduction">This template is a brief example of hierarchy.</p></body></html>
+```
 
 Content found after an element on the same line will also be considered that
 element’s content.
@@ -122,21 +138,25 @@ and wrapped in curly braces.
 
 For example, this template:
 
-	% function countTo(n)
-		% for (var i = 1; i <= n; i++)
-			"#{i}"
+```
+% function countTo(n)
+	% for (var i = 1; i <= n; i++)
+		"#{i}"
 
-	% countTo(5);
+% countTo(5);
+```
 
 might compile to this JavaScript:
 
-	function countTo(n) {
-		for (var i = 1; i <= n; i++) {
-			output += i;
-		}
+```javascript
+function countTo(n) {
+	for (var i = 1; i <= n; i++) {
+		output += i;
 	}
+}
 
-	countTo(5);
+countTo(5);
+```
 
 ### Special blocks
 
