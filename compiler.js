@@ -9,7 +9,7 @@ var POSSIBLE_COMMENT = /\/\/|<!--/;
 var voidTags = utilities.voidTags;
 
 function wrapExpression(expression) {
-	return POSSIBLE_COMMENT.test(expression) ? expression + '\n' : expression;
+	return POSSIBLE_COMMENT.test(expression) ? expression + "\n" : expression;
 }
 
 function addPossibleConflicts(possibleConflicts, code) {
@@ -70,7 +70,7 @@ var transform = {
 			for (var i = 0; i < newContext.classes.parts.length; i++) {
 				var part = newContext.classes.parts[i];
 
-				if (part.type === 'text') {
+				if (part.type === "text") {
 					part.value = part.value.substring(1);
 					break;
 				}
