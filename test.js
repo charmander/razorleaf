@@ -12,6 +12,16 @@ var tests = [
 		expected: { output: "5" },
 	},
 	{
+		name: "consecutive expressions",
+		template: '"#{1 + 2}#{3 | 4}"',
+		expected: { output: "37" },
+	},
+	{
+		name: "unescaped expression",
+		template: '!"#{\"unsafe\"}"',
+		expected: { output: "unsafe" },
+	},
+	{
 		name: "escaped double-quotes",
 		template: '"println!(\\"Hello, world!\\")"',
 		expected: { output: 'println!("Hello, world!")' }
@@ -106,6 +116,11 @@ var tests = [
 		name: "elif inside element",
 		template: 'div\n\tif false\n\t\t"foo"\n\telif true\n\t\t"bar"',
 		expected: { output: "<div>bar</div>" }
+	},
+	{
+		name: "unexpected character",
+		template: "$",
+		expected: { error: "Unexpected $" }
 	},
 	{
 		name: "character with two-byte UTF-16 representation",
