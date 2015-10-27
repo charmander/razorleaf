@@ -51,7 +51,7 @@ function describe(c) {
 		}
 	}
 
-	return require("./unicode")[code] || JSON.stringify(c);
+	return require("./unicode")[code] || "U+" + code.toString(16).toUpperCase();
 }
 
 function indentState(parser, c) {

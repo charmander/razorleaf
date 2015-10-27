@@ -138,6 +138,11 @@ var tests = [
 		expected: { error: "Unexpected ROBOT FACE" },
 	},
 	{
+		name: "Unspecified character",
+		template: "\udb40\ude00",
+		expected: { error: "Unexpected U+E0200" }
+	},
+	{
 		name: "initial multiple-tab indentation",
 		template: "div\n\t\tdiv",
 		expected: { error: "Excessive indent of 2 tabs; one tab always represents one indent level" }
