@@ -30,7 +30,7 @@ function isExpression(js) {
 	// jshint evil: true, nonew: false
 
 	try {
-		new Function("'use strict'; (" + js + "\n)");
+		new Function("'use strict'; (" + js + "\n); void " + js);
 		return true;
 	} catch (e) {
 		return false;

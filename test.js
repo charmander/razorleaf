@@ -173,6 +173,11 @@ var tests = [
 		template: '"\\g"',
 		expected: { error: "Expected escape sequence" }
 	},
+	{
+		name: "bad interpolation",
+		template: '"#{0)+(0}"',
+		expected: { error: "No interpolation is a valid JavaScript expression (of ['0)+(0'])" },
+	}
 ];
 
 function extend(a, b) {
