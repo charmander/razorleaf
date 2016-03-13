@@ -70,7 +70,7 @@ sections will not be escaped.
 Attributes are marked up using the syntax <code><i>name</i>:</code>.
 An attribute name can, optionally, be followed by a string to be used as
 its value; if a value isn’t provided, the attribute is assumed to be boolean
-(and present). Note that a string used as an attributes value cannot be “raw”
+(and present). Note that a string used as an attribute’s value cannot be “raw”
 — that is, cannot be preceded by an exclamation mark.
 
 ```
