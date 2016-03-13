@@ -1,5 +1,6 @@
 "use strict";
 
+var util = require("util");
 var utilities = require("./utilities");
 var CodeBlock = utilities.CodeBlock;
 var push = Array.prototype.push;
@@ -36,7 +37,7 @@ function isExpression(js) {
 	}
 }
 
-function describe(c) {
+function describeCharacter(c) {
 	if (RECOGNIZABLE.test(c)) {
 		return c;
 	}
@@ -52,6 +53,17 @@ function describe(c) {
 	}
 
 	return require("./unicode")[code] || "U+" + code.toString(16).toUpperCase();
+}
+
+function describeList(list, maxLength) {
+	var itemDescriptions =
+		list.slice(0, maxLength)
+			.map(util.inspect)
+			.join(", ");
+
+	return list.length > maxLength ?
+		"[" + itemDescriptions + ", …]" :
+		"[" + itemDescriptions + "]";
 }
 
 function indentState(parser, c) {
@@ -109,10 +121,7 @@ function indentState(parser, c) {
 				};
 			}
 
-			parser.indentType.determined = {
-				line: parser.position.line,
-				character: parser.position.character
-			};
+			parser.indentType.determined = parser.getPosition();
 		}
 
 		if (parser.indent > parser.context.indent + 1) {
@@ -185,7 +194,7 @@ function contentState(parser, c) {
 		return identifierState(parser, c);
 	}
 
-	throw parser.error("Unexpected " + describe(c));
+	throw parser.error("Unexpected " + describeCharacter(c));
 }
 
 function commentState(parser, c) {
@@ -204,10 +213,7 @@ function codeState(parser, c) {
 			parent: parser.context,
 			children: [],
 			indent: parser.indent,
-			position: {
-				line: parser.position.line,
-				character: parser.position.character
-			}
+			position: parser.getPosition(),
 		};
 
 		parser.context.parent.children.push(parser.context);
@@ -240,10 +246,7 @@ function identifierState(parser, c) {
 		children: [],
 		indent: parser.indent,
 		unexpected: parser.error("Unexpected element"),
-		position: {
-			line: parser.position.line,
-			character: parser.position.character
-		}
+		position: parser.getPosition(),
 	};
 
 	parser.context.parent.children.push(parser.context);
@@ -266,10 +269,7 @@ function classNameState(parser, c) {
 		value: parser.identifier,
 		parent: parser.context,
 		unexpected: parser.error("Unexpected class"),
-		position: {
-			line: parser.position.line,
-			character: parser.position.character
-		}
+		position: parser.getPosition(),
 	});
 
 	return contentState(parser, c);
@@ -292,10 +292,7 @@ function possibleAttributeState(parser, c) {
 		value: null,
 		parent: parser.context,
 		unexpected: parser.error("Unexpected attribute"),
-		position: {
-			line: parser.position.line,
-			character: parser.position.character
-		}
+		position: parser.getPosition(),
 	};
 
 	parser.context.parent.children.push(parser.context);
@@ -305,7 +302,7 @@ function possibleAttributeState(parser, c) {
 
 function rawStringState(parser, c) {
 	if (c !== '"') {
-		throw parser.error("Expected beginning quote of raw string, not " + describe(c));
+		throw parser.error("Expected beginning quote of raw string, not " + describeCharacter(c));
 	}
 
 	return stringState;
@@ -322,10 +319,7 @@ function stringState(parser, c) {
 			value: parser.string,
 			parent: parser.context,
 			unexpected: parser.error("Unexpected string"),
-			position: {
-				line: parser.position.line,
-				character: parser.position.character
-			}
+			position: parser.getPosition(),
 		};
 
 		if (parser.context.type === "attribute") {
@@ -358,6 +352,8 @@ function stringState(parser, c) {
 function stringPoundState(parser, c) {
 	if (c === "{") {
 		parser.interpolation = "";
+		parser.interpolationStart = parser.getPosition();
+		parser.badInterpolations = [];
 		return interpolationState;
 	}
 
@@ -367,13 +363,26 @@ function stringPoundState(parser, c) {
 
 function interpolationState(parser, c) {
 	if (c === null) {
-		throw parser.error("Interpolated section never resolves to a valid JavaScript expression"); // TODO: Where did it start?
+		if (parser.badInterpolations.length === 0) {
+			throw parser.error("Unclosed interpolation", parser.interpolationStart);
+		}
+
+		throw parser.error("No interpolation is a valid JavaScript expression (of " + describeList(parser.badInterpolations, 4) + ")", parser.interpolationStart);
 	}
 
-	if (c === "}" && isExpression(parser.interpolation)) {
-		var interpolation = POSSIBLE_COMMENT.test(parser.interpolation) ? parser.interpolation + "\n" : parser.interpolation;
-		parser.string.addExpression(parser.escapeFunction, interpolation);
-		return stringState;
+	if (c === "}") {
+		if (isExpression(parser.interpolation)) {
+			var interpolation = POSSIBLE_COMMENT.test(parser.interpolation) ? parser.interpolation + "\n" : parser.interpolation;
+			parser.string.addExpression(parser.escapeFunction, interpolation);
+			return stringState;
+		}
+
+		var lastBrace = parser.interpolation.lastIndexOf("}");
+		var badInterpolation =
+			lastBrace === -1 ?
+				parser.interpolation :
+				"…" + parser.interpolation.substring(lastBrace);
+		parser.badInterpolations.push(badInterpolation);
 	}
 
 	parser.interpolation += c;
@@ -476,10 +485,7 @@ keywords = {
 			type: "string",
 			value: new CodeBlock().addText("<!DOCTYPE html>"),
 			parent: parser.context,
-			position: {
-				line: parser.position.line,
-				character: parser.position.character
-			}
+			position: parser.getPosition(),
 		});
 
 		return contentState(parser, c);
@@ -495,7 +501,7 @@ keywords = {
 				return identifier(parser, c);
 			}
 
-			throw parser.error("Expected name of included template, not " + describe(c));
+			throw parser.error("Expected name of included template, not " + describeCharacter(c));
 		}
 
 		function identifier(parser, c) {
@@ -504,10 +510,7 @@ keywords = {
 					type: "include",
 					template: parser.identifier,
 					parent: parser.context,
-					position: {
-						line: parser.position.line,
-						character: parser.position.character
-					}
+					position: parser.getPosition(),
 				});
 
 				return contentState(parser, c);
@@ -542,7 +545,7 @@ keywords = {
 				return identifier(parser, c);
 			}
 
-			throw parser.error("Expected name of parent template, not " + describe(c));
+			throw parser.error("Expected name of parent template, not " + describeCharacter(c));
 		}
 
 		function identifier(parser, c) {
@@ -569,7 +572,7 @@ keywords = {
 				return identifier(parser, c);
 			}
 
-			throw parser.error("Expected name of block, not " + describe(c));
+			throw parser.error("Expected name of block, not " + describeCharacter(c));
 		}
 
 		function identifier(parser, c) {
@@ -613,7 +616,7 @@ keywords = {
 				return identifier(parser, c);
 			}
 
-			throw parser.error("Expected name of block to replace, not " + describe(c));
+			throw parser.error("Expected name of block to replace, not " + describeCharacter(c));
 		}
 
 		function identifier(parser, c) {
@@ -662,7 +665,7 @@ keywords = {
 				return identifier(parser, c);
 			}
 
-			throw parser.error("Expected name of block to append to, not " + describe(c));
+			throw parser.error("Expected name of block to append to, not " + describeCharacter(c));
 		}
 
 		function identifier(parser, c) {
@@ -721,10 +724,7 @@ keywords = {
 					parent: parser.context,
 					children: [],
 					indent: parser.indent,
-					position: {
-						line: parser.position.line,
-						character: parser.position.character
-					}
+					position: parser.getPosition(),
 				};
 
 				parser.context.parent.children.push(parser.context);
@@ -767,10 +767,7 @@ keywords = {
 					parent: parser.context,
 					children: [],
 					indent: parser.indent,
-					position: {
-						line: parser.position.line,
-						character: parser.position.character
-					}
+					position: parser.getPosition(),
 				};
 
 				previous.elif.push(elif);
@@ -797,10 +794,7 @@ keywords = {
 			parent: parser.context,
 			children: [],
 			indent: parser.indent,
-			position: {
-				line: parser.position.line,
-				character: parser.position.character
-			}
+			position: parser.getPosition(),
 		};
 
 		parser.context = previous.else;
@@ -817,7 +811,7 @@ keywords = {
 
 			if (c !== null && JS_IDENTIFIER.test(c)) {
 				if (DIGIT.test(c)) {
-					throw parser.error("Expected name of loop variable, not " + describe(c));
+					throw parser.error("Expected name of loop variable, not " + describeCharacter(c));
 				}
 
 				parser.itemIdentifier = "";
@@ -825,7 +819,7 @@ keywords = {
 				return itemIdentifier(parser, c);
 			}
 
-			throw parser.error("Expected name of loop variable, not " + describe(c));
+			throw parser.error("Expected name of loop variable, not " + describeCharacter(c));
 		}
 
 		function itemIdentifier(parser, c) {
@@ -942,10 +936,7 @@ keywords = {
 					parent: parser.context,
 					children: [],
 					indent: parser.indent,
-					position: {
-						line: parser.position.line,
-						character: parser.position.character
-					}
+					position: parser.getPosition(),
 				};
 
 				parser.context.parent.children.push(parser.context);
@@ -964,8 +955,6 @@ keywords = {
 function parse(template, options) {
 	var i;
 
-	var eof = false;
-
 	var root = {
 		type: "root",
 		children: [],
@@ -974,6 +963,18 @@ function parse(template, options) {
 		blockActions: null,
 		blocks: {}
 	};
+
+	var position = {
+		line: 1,
+		character: 0,
+		index: 0,
+	};
+
+	function describePosition(displayPosition) {
+		return displayPosition.index === template.length ?
+			"EOF" :
+			"line " + displayPosition.line + ", character " + displayPosition.character;
+	}
 
 	var parser = Object.seal({
 		context: root,
@@ -988,22 +989,28 @@ function parse(template, options) {
 		string: null,
 		escapeFunction: null,
 		interpolation: null,
+		interpolationStart: null,
+		badInterpolations: null,
 		charCode: null,
 		code: null,
-		position: {
-			line: 1,
-			character: 0
+		getPosition: function () {
+			return {
+				line: position.line,
+				character: position.character,
+				index: position.index,
+			};
 		},
-		error: function (message, position) {
-			position = position || parser.position;
-			var where = eof ? "EOF" : "line " + position.line + ", character " + position.character;
+		error: function (message, displayPosition) {
+			var where = describePosition(displayPosition || position);
 			return new SyntaxError(message + " at " + where + " in " + options.name + ".");
 		},
-		warn: function (message) {
-			if (options.debug) {
-				var where = eof ? "EOF" : "line " + parser.position.line + ", character " + parser.position.character;
-				console.warn("⚠ %s at %s in %s.", message, where, options.name);
+		warn: function (message, displayPosition) {
+			if (!options.debug) {
+				return;
 			}
+
+			var where = describePosition(displayPosition || position);
+			console.warn("⚠ %s at %s in %s.", message, where, options.name);
 		}
 	});
 
@@ -1013,8 +1020,8 @@ function parse(template, options) {
 		var c = template.charAt(i);
 
 		if (c === "\n" || c === "\r") {
-			parser.position.line++;
-			parser.position.character = 0;
+			position.line++;
+			position.character = 0;
 
 			if (c === "\r" && template.charAt(i + 1) === "\n") {
 				i++;
@@ -1035,10 +1042,10 @@ function parse(template, options) {
 		}
 
 		state = state(parser, c);
-		parser.position.character++;
+		position.character++;
+		position.index = i;
 	}
 
-	eof = true;
 	state(parser, null);
 
 	if (root.extends) {
