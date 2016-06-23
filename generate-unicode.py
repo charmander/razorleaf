@@ -3,7 +3,7 @@ import csv
 with open('UnicodeData.txt', 'r') as f:
 	reader = csv.reader(f, delimiter=';')
 
-	print('// Adapted from http://www.unicode.org/Public/8.0.0/ucd/UnicodeData.txt')
+	print('// Adapted from http://www.unicode.org/Public/9.0.0/ucd/UnicodeData.txt')
 	print('"use strict";')
 	print()
 	print('module.exports = {')

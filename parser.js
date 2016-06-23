@@ -1002,7 +1002,7 @@ function parse(template, options) {
 		},
 		error: function (message, displayPosition) {
 			var where = describePosition(displayPosition || position);
-			return new SyntaxError(message + " at " + where + " in " + options.name + ".");
+			return new SyntaxError(message + " at " + where + " in " + options.name);
 		},
 		warn: function (message, displayPosition) {
 			if (!options.debug) {

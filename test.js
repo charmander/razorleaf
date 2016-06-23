@@ -3,7 +3,7 @@
 var razorleaf = require("./");
 var parser = require("./parser");
 
-var PARSER_ERROR_MESSAGE = /^(.+) at line \d+, character \d+ in <Razor Leaf template>\./;
+var PARSER_ERROR_MESSAGE = /^(.+) at line \d+, character \d+ in <Razor Leaf template>/;
 
 var tests = [
 	{
@@ -136,6 +136,11 @@ var tests = [
 		name: "Unicode 8.0",
 		template: "\ud83e\udd16",
 		expected: { error: "Unexpected ROBOT FACE" },
+	},
+	{
+		name: "Unicode 9.0",
+		template: "\u23fb",
+		expected: { error: "Unexpected POWER SYMBOL" },
 	},
 	{
 		name: "Unspecified character",
