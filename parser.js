@@ -1,3 +1,4 @@
+/* eslint-disable no-shadow */
 "use strict";
 
 var util = require("util");
@@ -21,15 +22,14 @@ var singleCharEscapes = {
 	v: "\v",
 	f: "\f",
 	b: "\b",
-	0: "\0"
+	0: "\0",
 };
 
 var keywords;
 
 function isExpression(js) {
-	// jshint evil: true, nonew: false
-
 	try {
+		// eslint-disable-next-line no-new
 		new Function("'use strict'; (" + js + "\n); void " + js);
 		return true;
 	} catch (e) {
@@ -52,6 +52,7 @@ function describeCharacter(c) {
 		}
 	}
 
+	// eslint-disable-next-line global-require
 	return require("./unicode")[code] || "U+" + code.toString(16).toUpperCase();
 }
 
@@ -69,7 +70,7 @@ function describeList(list, maxLength) {
 function indentState(parser, c) {
 	if (c === null && parser.indentString) {
 		parser.warn("Trailing whitespace");
-		return;
+		return null;
 	}
 
 	if (c === "\n") {
@@ -111,13 +112,13 @@ function indentState(parser, c) {
 
 				parser.indentType = {
 					indentCharacter: "\t",
-					name: "one tab"
+					name: "one tab",
 				};
 			} else {
 				parser.indentType = {
 					indentCharacter: " ",
 					name: parser.indentString.length + " space" + (parser.indentString.length === 1 ? "" : "s"),
-					spaces: parser.indentString.length
+					spaces: parser.indentString.length,
 				};
 			}
 
@@ -141,7 +142,7 @@ function indentState(parser, c) {
 
 function contentState(parser, c) {
 	if (c === null) {
-		return;
+		return null;
 	}
 
 	if (parser.context.type === "attribute") {
@@ -530,7 +531,7 @@ keywords = {
 		parser.root.children = {
 			push: function () {
 				throw parser.error("A template that extends another can only contain block actions directly");
-			}
+			},
 		};
 
 		parser.root.blockActions = {};
@@ -586,7 +587,7 @@ keywords = {
 					name: parser.identifier,
 					parent: parser.context,
 					children: [],
-					indent: parser.indent
+					indent: parser.indent,
 				};
 
 				parser.context.parent.children.push(parser.context);
@@ -626,7 +627,7 @@ keywords = {
 					name: parser.identifier,
 					parent: parser.context,
 					children: [],
-					indent: parser.indent
+					indent: parser.indent,
 				};
 
 				var action = function (block) {
@@ -675,7 +676,7 @@ keywords = {
 					name: parser.identifier,
 					parent: parser.context,
 					children: [],
-					indent: parser.indent
+					indent: parser.indent,
 				};
 
 				var action = function (block) {
@@ -949,7 +950,7 @@ keywords = {
 		}
 
 		return leadingWhitespace(parser, c);
-	}
+	},
 };
 
 function parse(template, options) {
@@ -961,7 +962,7 @@ function parse(template, options) {
 		indent: -1,
 		extends: null,
 		blockActions: null,
-		blocks: {}
+		blocks: {},
 	};
 
 	var position = {
@@ -1011,7 +1012,7 @@ function parse(template, options) {
 
 			var where = describePosition(displayPosition || position);
 			console.warn("⚠ %s at %s in %s.", message, where, options.name);
-		}
+		},
 	});
 
 	var state = indentState;

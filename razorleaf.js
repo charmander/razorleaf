@@ -24,7 +24,7 @@ function combine() {
 
 var defaults = {
 	debug: false,
-	name: "<Razor Leaf template>"
+	name: "<Razor Leaf template>",
 };
 
 function compile(template, options) {
@@ -39,7 +39,7 @@ function DirectoryLoader(root, options) {
 	var loaderOptions = {
 		load: function (name) {
 			return parser.parse(loader.read(name), combine(defaults, loaderOptions, { name: name }, loader.options));
-		}
+		},
 	};
 
 	this.root = root;

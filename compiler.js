@@ -58,7 +58,7 @@ var transform = {
 		var newContext = {
 			attributes: new CodeBlock().addText("<" + name),
 			content: !isVoid && new CodeBlock(),
-			classes: new CodeBlock()
+			classes: new CodeBlock(),
 		};
 
 		node.children.forEach(function (child) {
@@ -138,7 +138,7 @@ var transform = {
 			context.content.addCode(wrapExpression(node.code) + " {");
 
 			var newContext = {
-				content: context.content
+				content: context.content,
 			};
 
 			node.children.forEach(function (child) {
@@ -163,7 +163,7 @@ var transform = {
 		var newContext = {
 			content: new CodeBlock(),
 			attributes: context.attributes && new CodeBlock(),
-			classes: context.classes && new CodeBlock()
+			classes: context.classes && new CodeBlock(),
 		};
 
 		var elseContext;
@@ -180,9 +180,9 @@ var transform = {
 						condition: node.elif[0].condition,
 						elif: node.elif.slice(1),
 						else: node.else,
-						children: node.elif[0].children
-					}
-				]
+						children: node.elif[0].children,
+					},
+				],
 			};
 		}
 
@@ -190,7 +190,7 @@ var transform = {
 			elseContext = {
 				content: new CodeBlock(),
 				attributes: context.attributes && new CodeBlock(),
-				classes: context.classes && new CodeBlock()
+				classes: context.classes && new CodeBlock(),
 			};
 
 			node.else.children.forEach(function (child) {
@@ -247,7 +247,7 @@ var transform = {
 	},
 	for: function (compiler, context, node) {
 		var newContext = {
-			content: context.content
+			content: context.content,
 		};
 
 		var originalName = null;
@@ -279,7 +279,7 @@ var transform = {
 		if (originalName) {
 			context.content.addCode(node.indexName + " = " + originalName + ";");
 		}
-	}
+	},
 };
 
 function compileNode(compiler, context, node) {
@@ -298,11 +298,11 @@ function compile(tree, options) {
 	var compiler = {
 		scope: scope,
 		possibleConflicts: scope.used,
-		options: options
+		options: options,
 	};
 
 	var context = {
-		content: new CodeBlock()
+		content: new CodeBlock(),
 	};
 
 	compileNode(compiler, context, tree);

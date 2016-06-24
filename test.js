@@ -24,75 +24,75 @@ var tests = [
 	{
 		name: "escaped double-quotes",
 		template: '"println!(\\"Hello, world!\\")"',
-		expected: { output: 'println!("Hello, world!")' }
+		expected: { output: 'println!("Hello, world!")' },
 	},
 	{
 		name: "comment after boolean attribute",
 		template: "div\n\tdata-test:\n\t# comment",
-		expected: { output: "<div data-test></div>" }
+		expected: { output: "<div data-test></div>" },
 	},
 	{
 		name: "non-conflicting output variable",
 		template: '% var output;\n"#{typeof output}"',
-		expected: { output: "undefined" }
+		expected: { output: "undefined" },
 	},
 	{
 		name: "including attributes",
 		template: "script include async",
 		include: {
-			async: "async:"
+			async: "async:",
 		},
-		expected: { output: "<script async></script>" }
+		expected: { output: "<script async></script>" },
 	},
 	{
 		name: "conditional attributes",
 		template: 'div "Hello, world!" \n\tif true\n\t\t.pass id: "#{data.example}"\n\tif false\n\t\t.fail data-fail: "true"',
 		data: { example: "example" },
-		expected: { output: '<div id="example" class="pass">Hello, world!</div>' }
+		expected: { output: '<div id="example" class="pass">Hello, world!</div>' },
 	},
 	{
 		name: "reordering of mixed conditionals",
 		template: '% var x = true;\ndiv "Hello, world!" \n\tif x\n\t\t"#{data.example}"\n\tif x = false\n\t\tdata-fail: "true"',
 		data: { example: "example" },
-		expected: { output: "<div>Hello, world!example</div>" }
+		expected: { output: "<div>Hello, world!example</div>" },
 	},
 	{
 		name: "nested conditionals",
 		template: 'div if true\n\tif 1\n\t\t"Good" data-example:',
-		expected: { output: "<div data-example>Good</div>" }
+		expected: { output: "<div data-example>Good</div>" },
 	},
 	{
 		name: "block appension",
 		template: 'extends layout\nappend title "two"',
 		include: {
-			layout: 'doctype\nhtml\n\thead\n\t\ttitle block title "one, "'
+			layout: 'doctype\nhtml\n\thead\n\t\ttitle block title "one, "',
 		},
-		expected: { output: "<!DOCTYPE html><html><head><title>one, two</title></head></html>" }
+		expected: { output: "<!DOCTYPE html><html><head><title>one, two</title></head></html>" },
 	},
 	{
 		name: "loop with index",
 		template: 'for x, y of [1, 2, 3]\n\t"#{x * (y + 1)}"',
-		expected: { output: "149" }
+		expected: { output: "149" },
 	},
 	{
 		name: "non-conflicting variable in loop with index",
 		template: 'for x, i of [1, 2, 3]\n\tfor y of [4, 5, 6]\n\t\t"#{i}"',
-		expected: { output: "000111222" }
+		expected: { output: "000111222" },
 	},
 	{
 		name: "non-conflicting variable in nested loops with index",
 		template: 'for x, i of [1, 2, 3]\n\tfor y, i of [4, 5, 6]\n\t\tfor z, i of [7, 8, 9]\n\t\t\t"#{i}"',
-		expected: { output: "012012012012012012012012012" }
+		expected: { output: "012012012012012012012012012" },
 	},
 	{
 		name: "modifying blocks in root template",
 		template: "replace a",
-		expected: { error: "Unexpected block replacement in a root template" }
+		expected: { error: "Unexpected block replacement in a root template" },
 	},
 	{
 		name: "carriage return/newline combination",
 		template: "hello\r\n\tworld",
-		expected: { output: "<hello><world></world></hello>" }
+		expected: { output: "<hello><world></world></hello>" },
 	},
 	{
 		name: "globals",
@@ -102,35 +102,35 @@ var tests = [
 			globals: {
 				s: function (n) {
 					return n === 1 ? "" : "s";
-				}
-			}
+				},
+			},
 		},
-		expected: { output: "99 red balloons" }
+		expected: { output: "99 red balloons" },
 	},
 	{
 		name: "attributes in else after content in if",
 		template: 'div\n\tif false\n\t\t"fail"\n\telse\n\t\tdata-status: "pass"',
-		expected: { output: '<div data-status="pass"></div>' }
+		expected: { output: '<div data-status="pass"></div>' },
 	},
 	{
 		name: "elif inside element",
 		template: 'div\n\tif false\n\t\t"foo"\n\telif true\n\t\t"bar"',
-		expected: { output: "<div>bar</div>" }
+		expected: { output: "<div>bar</div>" },
 	},
 	{
 		name: "unexpected character",
 		template: "$",
-		expected: { error: "Unexpected $" }
+		expected: { error: "Unexpected $" },
 	},
 	{
 		name: "character with two-byte UTF-16 representation",
 		template: "𝑎",
-		expected: { error: "Unexpected MATHEMATICAL ITALIC SMALL A" }
+		expected: { error: "Unexpected MATHEMATICAL ITALIC SMALL A" },
 	},
 	{
 		name: "Unicode 7.0",
 		template: "\u1ab0",
-		expected: { error: "Unexpected COMBINING DOUBLED CIRCUMFLEX ACCENT" }
+		expected: { error: "Unexpected COMBINING DOUBLED CIRCUMFLEX ACCENT" },
 	},
 	{
 		name: "Unicode 8.0",
@@ -145,44 +145,44 @@ var tests = [
 	{
 		name: "Unspecified character",
 		template: "\udb40\ude00",
-		expected: { error: "Unexpected U+E0200" }
+		expected: { error: "Unexpected U+E0200" },
 	},
 	{
 		name: "initial multiple-tab indentation",
 		template: "div\n\t\tdiv",
-		expected: { error: "Excessive indent of 2 tabs; one tab always represents one indent level" }
+		expected: { error: "Excessive indent of 2 tabs; one tab always represents one indent level" },
 	},
 	{
 		name: "hasOwnProperty as a variable name",
 		template: '% var hasOwnProperty;\nfor x of [1, 2, 3]\n\t"#{x}"',
-		expected: { output: "123" }
+		expected: { output: "123" },
 	},
 	{
 		name: "hasOwnProperty as a block name",
 		template: "extends layout\nreplace hasOwnProperty",
 		include: {
-			layout: "block hasOwnProperty"
+			layout: "block hasOwnProperty",
 		},
-		expected: { output: "" }
+		expected: { output: "" },
 	},
 	{
 		name: "block substitution with attributes",
 		template: "extends layout\nreplace content\n\t.test-pass",
 		include: {
-			layout: "body\n\tblock content\n\t\t.test-fail"
+			layout: "body\n\tblock content\n\t\t.test-fail",
 		},
-		expected: { output: '<body class="test-pass"></body>' }
+		expected: { output: '<body class="test-pass"></body>' },
 	},
 	{
 		name: "invalid escape",
 		template: '"\\g"',
-		expected: { error: "Expected escape sequence" }
+		expected: { error: "Expected escape sequence" },
 	},
 	{
 		name: "bad interpolation",
 		template: '"#{0)+(0}"',
 		expected: { error: "No interpolation is a valid JavaScript expression (of ['0)+(0'])" },
-	}
+	},
 ];
 
 function extend(a, b) {
@@ -203,7 +203,7 @@ function passes(test) {
 	var options = {
 		load: function (name) {
 			return parser.parse(test.include[name], options);
-		}
+		},
 	};
 
 	try {

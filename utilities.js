@@ -2,7 +2,7 @@
 
 var voidTags = [
 	"area", "base", "br", "col", "command", "embed", "hr", "img", "input",
-	"keygen", "link", "meta", "param", "source", "track", "wbr"
+	"keygen", "link", "meta", "param", "source", "track", "wbr",
 ];
 
 function escapeLiteral(text) {
@@ -35,7 +35,7 @@ function CodeBlock() {
 CodeBlock.prototype.addText = function (text) {
 	this.parts.push({
 		type: "text",
-		value: text
+		value: text,
 	});
 
 	return this;
@@ -45,7 +45,7 @@ CodeBlock.prototype.addExpression = function (escapeFunction, expression) {
 	this.parts.push({
 		type: "expression",
 		escapeFunction: escapeFunction,
-		value: expression
+		value: expression,
 	});
 
 	return this;
@@ -54,7 +54,7 @@ CodeBlock.prototype.addExpression = function (escapeFunction, expression) {
 CodeBlock.prototype.addCode = function (code) {
 	this.parts.push({
 		type: "code",
-		value: code
+		value: code,
 	});
 
 	return this;
@@ -74,48 +74,48 @@ CodeBlock.prototype.toCode = function (outputVariable, initialState) {
 		var part = this.parts[i];
 
 		switch (part.type) {
-			case "text":
-				if (currentType === "code") {
-					code += outputVariable + " += '";
-				} else if (currentType === "expression") {
-					code += " + '";
-				}
+		case "text":
+			if (currentType === "code") {
+				code += outputVariable + " += '";
+			} else if (currentType === "expression") {
+				code += " + '";
+			}
 
-				code += escapeLiteral(part.value);
-				currentType = "text";
-				break;
+			code += escapeLiteral(part.value);
+			currentType = "text";
+			break;
 
-			case "expression":
-				if (currentType === "code") {
-					code += outputVariable + " += ";
-				} else if (currentType === "expression") {
-					code += " + ";
-				} else {
-					code += "' + ";
-				}
+		case "expression":
+			if (currentType === "code") {
+				code += outputVariable + " += ";
+			} else if (currentType === "expression") {
+				code += " + ";
+			} else {
+				code += "' + ";
+			}
 
-				if (part.escapeFunction) {
-					code += part.escapeFunction + "((" + part.value + "))";
-				} else {
-					code += "(" + part.value + ")";
-				}
+			if (part.escapeFunction) {
+				code += part.escapeFunction + "((" + part.value + "))";
+			} else {
+				code += "(" + part.value + ")";
+			}
 
-				currentType = "expression";
-				break;
+			currentType = "expression";
+			break;
 
-			case "code":
-				if (currentType === "text") {
-					code += "';\n";
-				} else if (currentType === "expression") {
-					code += ";\n";
-				}
+		case "code":
+			if (currentType === "text") {
+				code += "';\n";
+			} else if (currentType === "expression") {
+				code += ";\n";
+			}
 
-				code += part.value + "\n";
-				currentType = "code";
-				break;
+			code += part.value + "\n";
+			currentType = "code";
+			break;
 
-			default:
-				throw new Error("Unknown part type " + part.type + ".");
+		default:
+			throw new Error("Unknown part type " + part.type + ".");
 		}
 	}
 
