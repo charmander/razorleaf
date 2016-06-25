@@ -14,16 +14,19 @@ var POSSIBLE_COMMENT = /\/\/|<!--/;
 var BLOCK_OR_TEMPLATE_NAME = /\S/;
 var JS_IDENTIFIER = /\w/;
 
-var singleCharEscapes = {
-	"\\": "\\\\",
-	n: "\n",
-	r: "\r",
-	t: "\t",
-	v: "\v",
-	f: "\f",
-	b: "\b",
-	0: "\0",
-};
+var singleCharEscapes = Object.assign(
+	Object.create(null),
+	{
+		"\\": "\\\\",
+		n: "\n",
+		r: "\r",
+		t: "\t",
+		v: "\v",
+		f: "\f",
+		b: "\b",
+		0: "\0",
+	}
+);
 
 var keywords;
 
@@ -416,7 +419,7 @@ function escapeState(parser, c) {
 		return escapeU1;
 	}
 
-	if (singleCharEscapes.hasOwnProperty(c)) {
+	if (c in singleCharEscapes) {
 		parser.string.addText(singleCharEscapes[c]);
 		return stringState;
 	}
@@ -550,7 +553,7 @@ keywords = {
 			},
 		};
 
-		parser.root.blockActions = {};
+		parser.root.blockActions = Object.create(null);
 
 		function leadingWhitespace(parser, c) {
 			if (c === " ") {
@@ -597,7 +600,7 @@ keywords = {
 
 		function identifier(parser, c) {
 			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
-				if (hasOwnProperty.call(parser.root.blocks, parser.identifier)) {
+				if (parser.identifier in parser.root.blocks) {
 					var existingBlock = parser.root.blocks[parser.identifier];
 
 					throw parser.error(
@@ -660,7 +663,7 @@ keywords = {
 					block.children = newBlock.children;
 				};
 
-				if (hasOwnProperty.call(parser.root.blockActions, parser.identifier)) {
+				if (parser.identifier in parser.root.blockActions) {
 					parser.root.blockActions[parser.identifier].push(action);
 				} else {
 					parser.root.blockActions[parser.identifier] = [action];
@@ -709,7 +712,7 @@ keywords = {
 					push.apply(block.children, newBlock.children);
 				};
 
-				if (hasOwnProperty.call(parser.root.blockActions, parser.identifier)) {
+				if (parser.identifier in parser.root.blockActions) {
 					parser.root.blockActions[parser.identifier].push(action);
 				} else {
 					parser.root.blockActions[parser.identifier] = [action];
@@ -988,7 +991,7 @@ function parse(template, options) {
 		indent: -1,
 		extends: null,
 		blockActions: null,
-		blocks: {},
+		blocks: Object.create(null),
 		macros: Object.create(null),
 	};
 
@@ -1219,29 +1222,25 @@ function parse(template, options) {
 		var blockName;
 
 		for (blockName in root.blocks) {
-			if (hasOwnProperty.call(root.blocks, blockName)) {
-				if (hasOwnProperty.call(parentTemplate.blocks, blockName)) {
-					throw new SyntaxError("Parent template " + root.extends + " already contains a block named “" + blockName + "”.");
-				}
-
-				parentTemplate.blocks[blockName] = root.blocks[blockName];
+			if (blockName in parentTemplate.blocks) {
+				throw new SyntaxError("Parent template " + root.extends + " already contains a block named “" + blockName + "”.");
 			}
+
+			parentTemplate.blocks[blockName] = root.blocks[blockName];
 		}
 
 		for (blockName in root.blockActions) {
-			if (hasOwnProperty.call(root.blockActions, blockName)) {
-				if (!hasOwnProperty.call(parentTemplate.blocks, blockName)) {
-					throw new SyntaxError("There is no block named “" + blockName + "”.");
-				}
+			if (!(blockName in parentTemplate.blocks)) {
+				throw new SyntaxError("There is no block named “" + blockName + "”.");
+			}
 
-				var block = parentTemplate.blocks[blockName];
-				var actions = root.blockActions[blockName];
+			var block = parentTemplate.blocks[blockName];
+			var actions = root.blockActions[blockName];
 
-				for (i = 0; i < actions.length; i++) {
-					var action = actions[i];
+			for (i = 0; i < actions.length; i++) {
+				var action = actions[i];
 
-					action(block);
-				}
+				action(block);
 			}
 		}
 
