@@ -37,6 +37,14 @@ function isExpression(js) {
 	}
 }
 
+function isIdentifierCharacter(c) {
+	return c !== null && IDENTIFIER.test(c);
+}
+
+function isLeadingSurrogate(code) {
+	return code >= 0xd800 && code <= 0xdbff;
+}
+
 function describeCharacter(c) {
 	if (RECOGNIZABLE.test(c)) {
 		return c;
@@ -44,7 +52,7 @@ function describeCharacter(c) {
 
 	var code = c.charCodeAt(0);
 
-	if (code >= 0xd800 && code <= 0xdbff) {
+	if (isLeadingSurrogate(code)) {
 		var trailSurrogate = c.charCodeAt(1);
 
 		if (trailSurrogate) {
@@ -126,7 +134,7 @@ function indentState(parser, c) {
 		}
 
 		if (parser.indent > parser.context.indent + 1) {
-			throw parser.error("Excessive indent " + parser.indent + "; expected " + (parser.context.indent + 1) + " or smaller");
+			throw parser.error("Excessive indent " + parser.indent + "; expected " + (parser.context.indent + 1) + (parser.context.indent === -1 ? "" : " or smaller"));
 		}
 
 		while (parser.context.indent >= parser.indent) {
@@ -166,18 +174,21 @@ function contentState(parser, c) {
 
 	if (c === ".") {
 		parser.identifier = "";
+		parser.identifierStart = parser.getPosition();
 		return classNameState;
 	}
 
 	if (c === "!") {
 		parser.string = new CodeBlock();
 		parser.escapeFunction = null;
+		parser.stringStart = parser.getPosition();
 		return rawStringState;
 	}
 
 	if (c === '"') {
 		parser.string = new CodeBlock();
 		parser.escapeFunction = parser.context.type === "attribute" ? "escapeAttributeValue" : "escapeContent";
+		parser.stringStart = parser.getPosition();
 		return stringState;
 	}
 
@@ -190,8 +201,9 @@ function contentState(parser, c) {
 		return codeState;
 	}
 
-	if (IDENTIFIER.test(c)) {
+	if (isIdentifierCharacter(c)) {
 		parser.identifier = "";
+		parser.identifierStart = parser.getPosition();
 		return identifierState(parser, c);
 	}
 
@@ -231,7 +243,7 @@ function identifierState(parser, c) {
 		return possibleAttributeState;
 	}
 
-	if (c !== null && IDENTIFIER.test(c)) {
+	if (isIdentifierCharacter(c)) {
 		parser.identifier += c;
 		return identifierState;
 	}
@@ -246,8 +258,8 @@ function identifierState(parser, c) {
 		parent: parser.context,
 		children: [],
 		indent: parser.indent,
-		unexpected: parser.error("Unexpected element"),
-		position: parser.getPosition(),
+		unexpected: parser.error("Unexpected element", parser.identifierStart, parser.identifier.length),
+		position: parser.identifierStart,
 	};
 
 	parser.context.parent.children.push(parser.context);
@@ -256,7 +268,7 @@ function identifierState(parser, c) {
 }
 
 function classNameState(parser, c) {
-	if (c !== null && IDENTIFIER.test(c)) {
+	if (isIdentifierCharacter(c)) {
 		parser.identifier += c;
 		return classNameState;
 	}
@@ -269,7 +281,7 @@ function classNameState(parser, c) {
 		type: "class",
 		value: parser.identifier,
 		parent: parser.context,
-		unexpected: parser.error("Unexpected class"),
+		unexpected: parser.error("Unexpected class", parser.identifierStart, parser.identifier.length),
 		position: parser.getPosition(),
 	});
 
@@ -277,7 +289,7 @@ function classNameState(parser, c) {
 }
 
 function possibleAttributeState(parser, c) {
-	if (c !== null && IDENTIFIER.test(c)) {
+	if (isIdentifierCharacter(c)) {
 		parser.identifier += ":" + c;
 		return identifierState;
 	}
@@ -292,7 +304,7 @@ function possibleAttributeState(parser, c) {
 		name: parser.identifier,
 		value: null,
 		parent: parser.context,
-		unexpected: parser.error("Unexpected attribute"),
+		unexpected: parser.error("Unexpected attribute", parser.identifierStart, parser.identifier.length + 1),
 		position: parser.getPosition(),
 	};
 
@@ -319,8 +331,8 @@ function stringState(parser, c) {
 			type: "string",
 			value: parser.string,
 			parent: parser.context,
-			unexpected: parser.error("Unexpected string"),
-			position: parser.getPosition(),
+			unexpected: parser.error("Unexpected string", parser.stringStart, parser.getPosition().index - parser.stringStart.index + 1),
+			position: parser.stringStart,
 		};
 
 		if (parser.context.type === "attribute") {
@@ -525,12 +537,16 @@ keywords = {
 	},
 	extends: function (parser, c) {
 		if (parser.root.children.length || parser.root.extends) {
-			throw parser.error("extends must appear first in a template");
+			throw parser.error("extends must appear first in a template", parser.identifierStart, parser.identifier.length);
 		}
 
 		parser.root.children = {
-			push: function () {
-				throw parser.error("A template that extends another can only contain block actions directly");
+			push: function (child) {
+				if (child.type === "element") {
+					throw parser.error("A child template can only contain block actions at the root level", child.position, child.name.length);
+				} else {
+					throw parser.error("A child template can only contain block actions at the root level", child.position);
+				}
 			},
 		};
 
@@ -563,6 +579,8 @@ keywords = {
 		return leadingWhitespace(parser, c);
 	},
 	block: function (parser, c) {
+		var blockStart = parser.identifierStart;
+
 		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
@@ -570,6 +588,7 @@ keywords = {
 
 			if (c !== null && BLOCK_OR_TEMPLATE_NAME.test(c)) {
 				parser.identifier = "";
+				parser.identifierStart = parser.getPosition();
 				return identifier(parser, c);
 			}
 
@@ -579,7 +598,13 @@ keywords = {
 		function identifier(parser, c) {
 			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
 				if (hasOwnProperty.call(parser.root.blocks, parser.identifier)) {
-					throw parser.error("A block named “" + parser.identifier + "” has already been defined");
+					var existingBlock = parser.root.blocks[parser.identifier];
+
+					throw parser.error(
+						"A block named “" + parser.identifier + "” has already been defined on line " + existingBlock.position.line,
+						parser.identifierStart,
+						parser.identifier.length
+					);
 				}
 
 				parser.context = {
@@ -588,6 +613,7 @@ keywords = {
 					parent: parser.context,
 					children: [],
 					indent: parser.indent,
+					position: blockStart,
 				};
 
 				parser.context.parent.children.push(parser.context);
@@ -604,7 +630,7 @@ keywords = {
 	},
 	replace: function (parser, c) {
 		if (!parser.root.extends) {
-			throw parser.error("Unexpected block replacement in a root template");
+			throw parser.error("Unexpected block replacement in a root template", parser.identifierStart, parser.identifier.length);
 		}
 
 		function leadingWhitespace(parser, c) {
@@ -653,7 +679,7 @@ keywords = {
 	},
 	append: function (parser, c) {
 		if (!parser.root.extends) {
-			throw parser.error("Unexpected block appension in a root template");
+			throw parser.error("Unexpected block appension in a root template", parser.identifierStart, parser.identifier.length);
 		}
 
 		function leadingWhitespace(parser, c) {
@@ -745,7 +771,7 @@ keywords = {
 		var previous = parser.context.children && parser.context.children[parser.context.children.length - 1];
 
 		if (!previous || previous.type !== "if" || previous.else) {
-			throw parser.error("Unexpected elif");
+			throw parser.error("Unexpected elif", parser.identifierStart, parser.identifier.length);
 		}
 
 		function leadingWhitespace(parser, c) {
@@ -787,7 +813,7 @@ keywords = {
 		var previous = parser.context.children && parser.context.children[parser.context.children.length - 1];
 
 		if (!previous || previous.type !== "if" || previous.else) {
-			throw parser.error("Unexpected else");
+			throw parser.error("Unexpected else", parser.identifierStart, parser.identifier.length);
 		}
 
 		previous.else = {
@@ -904,7 +930,7 @@ keywords = {
 				throw parser.error("Expected loop collection expression");
 			}
 
-			if (IDENTIFIER.test(c)) {
+			if (isIdentifierCharacter(c)) {
 				throw parser.error("Expected of");
 			}
 
@@ -963,11 +989,12 @@ function parse(template, options) {
 		extends: null,
 		blockActions: null,
 		blocks: {},
+		macros: Object.create(null),
 	};
 
 	var position = {
 		line: 1,
-		character: 0,
+		character: 1,
 		index: 0,
 	};
 
@@ -977,6 +1004,49 @@ function parse(template, options) {
 			"line " + displayPosition.line + ", character " + displayPosition.character;
 	}
 
+	function TemplateError(message, source) {
+		Object.defineProperty(this, "message", {
+			configurable: true,
+			writable: true,
+			value: message,
+		});
+
+		Object.defineProperty(this, "position", {
+			configurable: true,
+			writable: true,
+			value: source.position,
+		});
+
+		Object.defineProperty(this, "context", {
+			configurable: true,
+			writable: true,
+			value: source.context,
+		});
+
+		Error.captureStackTrace(this, this.constructor);
+
+		var stackInsert = "    at template (" + source.name + ":" + source.position.line + ":" + source.position.character + ")";
+
+		Object.defineProperty(this, "stack", {
+			configurable: true,
+			writable: true,
+			value: this.context + "\n" + this.stack.replace("\n", "\n" + stackInsert + "\n"),
+		});
+	}
+
+	TemplateError.prototype = Object.create(SyntaxError.prototype, {
+		constructor: {
+			configurable: true,
+			writable: true,
+			value: TemplateError,
+		},
+		name: {
+			configurable: true,
+			writable: true,
+			value: TemplateError.name,
+		},
+	});
+
 	var parser = Object.seal({
 		context: root,
 		root: root,
@@ -984,10 +1054,12 @@ function parse(template, options) {
 		indent: null,
 		indentType: null,
 		identifier: null,
+		identifierStart: null,
 		itemIdentifier: null,
 		indexIdentifier: null,
 		raw: null,
 		string: null,
+		stringStart: null,
 		escapeFunction: null,
 		interpolation: null,
 		interpolationStart: null,
@@ -1001,9 +1073,14 @@ function parse(template, options) {
 				index: position.index,
 			};
 		},
-		error: function (message, displayPosition) {
-			var where = describePosition(displayPosition || position);
-			return new SyntaxError(message + " at " + where + " in " + options.name);
+		error: function (message, displayPosition, extent) {
+			var where = displayPosition || position;
+
+			return new TemplateError(message, {
+				position: where,
+				name: options.name,
+				context: getContext(template, where, extent || 1),
+			});
 		},
 		warn: function (message, displayPosition) {
 			if (!options.debug) {
@@ -1014,6 +1091,94 @@ function parse(template, options) {
 			console.warn("⚠ %s at %s in %s.", message, where, options.name);
 		},
 	});
+
+	function getContext(template, position, extent) {
+		var numberWidth = (Math.log10(position.line) | 0) + 2;
+
+		function padLeft(s, width) {
+			return s.length < width ?
+				" ".repeat(width - s.length) + s :
+				s;
+		}
+
+		function formatLine(number, line, highlight) {
+			var highlightStart = highlight && highlight.start;
+			var highlightExtent = highlight && highlight.extent;
+
+			if (highlight && highlightExtent < 0) {
+				highlightStart += highlightExtent;
+				highlightExtent *= -1;
+			}
+
+			var formattedNumber = padLeft(String(number), numberWidth);
+			var formattedLine =
+				line
+					.replace(/^\t+/, function (match) {
+						if (highlight) {
+							if (highlightStart < match.length) {
+								highlightStart *= 4;
+								highlightExtent += 3;
+							} else {
+								highlightStart += 3 * match.length;
+							}
+						}
+
+						return " ".repeat(4 * match.length);
+					})
+					.replace(/\t/g, "⇥");
+
+			if (highlight) {
+				for (var i = 0; i < highlightStart; i++) {
+					if (isLeadingSurrogate(formattedLine.charCodeAt(i))) {
+						highlightStart++;
+						i++;
+					}
+				}
+			}
+
+			return formattedNumber + " │ " + (
+				highlight ?
+					formattedLine.substr(0, highlightStart) + "\x1b[41;37m" + formattedLine.substr(highlightStart, highlightExtent) + "\x1b[0m" + formattedLine.substr(highlightStart + highlightExtent) :
+					formattedLine
+			);
+		}
+
+		var lines = template.split(/\r\n|[\r\n]/);
+
+		if (lines[lines.length - 1] === "") {
+			lines.pop();
+		}
+
+		var positionLine = position.line;
+		var positionCharacter = position.character;
+
+		if (position.character === 0) {
+			positionLine--;
+			positionCharacter = lines[positionLine - 1].length + 1;
+		}
+
+		var output = "";
+		var lowerBound = Math.max(0, positionLine - 3);
+		var upperBound = Math.min(lines.length, positionLine + 2);
+		var i;
+
+		for (i = lowerBound; i < positionLine - 1; i++) {
+			output += "\x1b[38;5;245m" + formatLine(i + 1, lines[i]) + "\x1b[0m\n";
+		}
+
+		var highlight = {
+			start: positionCharacter - 1,
+			extent: extent,
+		};
+
+		output += formatLine(positionLine, lines[positionLine - 1], highlight) + "\n";
+
+		for (i = positionLine; i < upperBound; i++) {
+			output += "\x1b[38;5;245m" + formatLine(i + 1, lines[i]) + "\x1b[0m\n";
+		}
+
+		return output;
+	}
 
 	var state = indentState;
 
@@ -1033,7 +1198,7 @@ function parse(template, options) {
 
 		var code = template.charCodeAt(i);
 
-		if (code >= 0xd800 && code <= 0xdbff) {
+		if (isLeadingSurrogate(code)) {
 			var nextCode = template.charCodeAt(i + 1);
 
 			if (nextCode >= 0xdc00 && nextCode <= 0xdfff) {
