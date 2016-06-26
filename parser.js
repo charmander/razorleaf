@@ -13,6 +13,26 @@ var RECOGNIZABLE = /[!-~]/;
 var POSSIBLE_COMMENT = /\/\/|<!--/;
 var BLOCK_OR_TEMPLATE_NAME = /\S/;
 var JS_IDENTIFIER = /\w/;
+var JS_RESERVED_WORDS = new Set([
+	"arguments",
+	"class",
+	"const",
+	"enum",
+	"eval",
+	"export",
+	"extends",
+	"implements",
+	"import",
+	"interface",
+	"let",
+	"package",
+	"private",
+	"protected",
+	"public",
+	"static",
+	"super",
+	"yield",
+]);
 
 var singleCharEscapes = Object.assign(
 	Object.create(null),
@@ -246,6 +266,10 @@ function identifierState(parser, c) {
 		return possibleAttributeState;
 	}
 
+	if (c === "(") {
+		return macroCallState;
+	}
+
 	if (isIdentifierCharacter(c)) {
 		parser.identifier += c;
 		return identifierState;
@@ -284,7 +308,7 @@ function classNameState(parser, c) {
 		type: "class",
 		value: parser.identifier,
 		parent: parser.context,
-		unexpected: parser.error("Unexpected class", parser.identifierStart, parser.identifier.length),
+		unexpected: parser.error("Unexpected class", parser.identifierStart, parser.identifier.length + 1),
 		position: parser.getPosition(),
 	});
 
@@ -314,6 +338,143 @@ function possibleAttributeState(parser, c) {
 	parser.context.parent.children.push(parser.context);
 
 	return contentState(parser, c);
+}
+
+function macroCallState(parser, c) {
+	parser.context = {
+		type: "call",
+		name: parser.identifier,
+		parent: parser.context,
+		parameters: [],
+		children: [],
+		indent: parser.indent,
+		position: parser.identifierStart,
+		macroUndefined: parser.error("Macro “" + parser.identifier + "” is not defined", parser.identifierStart, parser.identifier.length),
+	};
+
+	parser.context.parent.children.push(parser.context);
+	parser.macroCallParameter = "";
+	parser.macroCallStart = parser.getPosition();
+	parser.badMacroCallParameters = [];
+
+	return macroCallBeforeParameterState(parser, c);
+}
+
+function macroCallBeforeParameterState(parser, c) {
+	if (c === " " || c === "\n" || c === "\t") {
+		return macroCallBeforeParameterState;
+	}
+
+	if (c === ")") {
+		return contentState;
+	}
+
+	if (c === ",") {
+		throw parser.error("Expected parameter value");
+	}
+
+	parser.macroCallParameterStart = parser.getPosition();
+
+	if (c !== null && c !== ":" && !DIGIT.test(c)) {
+		parser.macroCallParameterName = "";
+		return macroCallPossibleNamedParameterState(parser, c);
+	} else {
+		parser.macroCallParameterName = null;
+		return macroCallParameterState(parser, c);
+	}
+}
+
+function macroCallPossibleNamedParameterState(parser, c) {
+	if (c === ":") {
+		return macroCallAfterParameterNameState;
+	}
+
+	if (c !== null && JS_IDENTIFIER.test(c)) {
+		parser.macroCallParameterName += c;
+		return macroCallPossibleNamedParameterState;
+	}
+
+	parser.macroCallParameter = parser.macroCallParameterName;
+	parser.macroCallParameterName = null;
+	return macroCallParameterState(parser, c);
+}
+
+function macroCallAfterParameterNameState(parser, c) {
+	if (c === " ") {
+		return macroCallAfterParameterNameState;
+	}
+
+	if (c === ")" || c === ",") {
+		throw parser.error("Expected parameter value");
+	}
+
+	if (
+		parser.macroCallParameterName !== null &&
+		parser.context.parameters.some(function (parameter) {
+			return parameter.name === parser.macroCallParameterName;
+		})
+	) {
+		throw parser.error("A value has already been specified for the parameter “" + parser.macroCallParameterName + "”", parser.macroCallParameterStart, parser.macroCallParameterName.length + 1);
+	}
+
+	return macroCallParameterState(parser, c);
+}
+
+function macroCallParameterState(parser, c) {
+	if (c === null) {
+		if (parser.badMacroCallParameters.length === 0) {
+			throw parser.error("Unclosed macro call", parser.macroCallStart);
+		}
+
+		throw parser.error("No parameter is a valid JavaScript expression (of " + describeList(parser.badMacroCallParameters, 4) + ")", parser.interpolationStart);
+	}
+
+	if (c === ")" || c === ",") {
+		if (isExpression(parser.macroCallParameter)) {
+			if (
+				parser.macroCallParameterName === null &&
+				parser.context.parameters.some(function (parameter) {
+					return parameter.name !== null;
+				})
+			) {
+				throw parser.error("A positional parameter can’t be placed after a named parameter", parser.macroCallParameterStart, parser.macroCallParameter.length);
+			}
+
+			parser.context.parameters.push({
+				name: parser.macroCallParameterName,
+				value: parser.macroCallParameter,
+				position: parser.macroCallParameterStart,
+				alreadyProvided: parser.error("A value for the parameter “" + parser.macroCallParameterName + "” was already provided"),
+				nonexistent: parser.error("The macro “" + parser.context.name + "” does not accept a parameter named “" + parser.macroCallParameterName + "”"),
+			});
+
+			if (c === ")") {
+				parser.macroCallParameter = null;
+				parser.macroCallStart = null;
+				parser.badMacroCallParameters = null;
+				return contentState;
+			} else {
+				parser.macroCallParameter = "";
+				parser.badMacroCallParameters = [];
+				return macroCallBeforeParameterState;
+			}
+		}
+
+		var lastTerminator = Math.max(
+			parser.macroCallParameter.lastIndexOf(")"),
+			parser.macroCallParameter.lastIndexOf(",")
+		);
+
+		var badParameter =
+			lastTerminator === -1 ?
+				parser.macroCallParameter :
+				"…" + parser.macroCallParameter.substring(lastTerminator);
+
+		parser.badMacroCallParameters.push(badParameter);
+	}
+
+	parser.macroCallParameter += c;
+	return macroCallParameterState;
 }
 
 function rawStringState(parser, c) {
@@ -546,9 +707,9 @@ keywords = {
 		parser.root.children = {
 			push: function (child) {
 				if (child.type === "element") {
-					throw parser.error("A child template can only contain block actions at the root level", child.position, child.name.length);
+					throw parser.error("A child template can only contain block actions or macros at the root level", child.position, child.name.length);
 				} else {
-					throw parser.error("A child template can only contain block actions at the root level", child.position);
+					throw parser.error("A child template can only contain block actions or macros at the root level", child.position);
 				}
 			},
 		};
@@ -980,6 +1141,147 @@ keywords = {
 
 		return leadingWhitespace(parser, c);
 	},
+	macro: function (parser, c) {
+		var macroStart = parser.identifierStart;
+
+		function leadingWhitespace(parser, c) {
+			if (c === " ") {
+				return leadingWhitespace;
+			}
+
+			if (isIdentifierCharacter(c)) {
+				parser.identifier = "";
+				parser.identifierStart = parser.getPosition();
+				return identifier(parser, c);
+			}
+
+			throw parser.error("Expected name of macro, not " + describeCharacter(c));
+		}
+
+		function identifier(parser, c) {
+			if (!isIdentifierCharacter(c)) {
+				if (parser.identifier in parser.root.macros) {
+					var existingMacro = parser.root.macros[parser.identifier];
+
+					throw parser.error(
+						"A macro named “" + parser.identifier + "” has already been defined on line " + existingMacro.position.line,
+						parser.identifierStart,
+						parser.identifier.length
+					);
+				}
+
+				parser.context = {
+					type: "macro",
+					name: parser.identifier,
+					parent: parser.context,
+					parameters: [],
+					children: [],
+					indent: parser.indent,
+					position: macroStart,
+				};
+
+				parser.root.macros[parser.identifier] = parser.context;
+
+				return contentOrParameterList(parser, c);
+			}
+
+			parser.identifier += c;
+			return identifier;
+		}
+
+		function contentOrParameterList(parser, c) {
+			if (c === " ") {
+				return contentOrParameterList;
+			}
+
+			if (c === "(") {
+				parser.macroParameterListStart = parser.getPosition();
+				return beforeParameterName;
+			}
+
+			return contentState(parser, c);
+		}
+
+		function beforeParameterName(parser, c) {
+			if (c === " ") {
+				return beforeParameterName;
+			}
+
+			if (c === ",") {
+				throw parser.error("Expected parameter name");
+			}
+
+			if (c === ")") {
+				return contentState;
+			}
+
+			if (DIGIT.test(c)) {
+				throw parser.error("Expected parameter name, not digit");
+			}
+
+			parser.identifier = "";
+			parser.identifierStart = parser.getPosition();
+			return parameterName(parser, c);
+		}
+
+		function parameterName(parser, c) {
+			if (c === null) {
+				throw parser.error("Unclosed macro parameter list", parser.macroParameterListStart);
+			}
+
+			if (c === ")" || c === "," || c === " ") {
+				if (parser.context.parameters.indexOf(parser.identifier) !== -1) {
+					throw parser.error("Parameter “" + parser.identifier + "” already specified", parser.identifierStart, parser.identifier.length);
+				}
+
+				if (JS_RESERVED_WORDS.has(parser.identifier)) {
+					throw parser.error("Parameter name “" + parser.identifier + "” is reserved word", parser.identifierStart, parser.identifier.length);
+				}
+
+				parser.context.parameters.push(parser.identifier);
+				return afterParameterName(parser, c);
+			}
+
+			if (!JS_IDENTIFIER.test(c)) {
+				throw parser.error("Unexpected " + describeCharacter(c));
+			}
+
+			parser.identifier += c;
+			return parameterName;
+		}
+
+		function afterParameterName(parser, c) {
+			if (c === " ") {
+				return afterParameterName;
+			}
+
+			if (c === ",") {
+				return beforeParameterName;
+			}
+
+			if (c === ")") {
+				return contentState;
+			}
+
+			if (c === null) {
+				throw parser.error("Unclosed macro parameter list", parser.macroParameterListStart);
+			}
+
+			throw parser.error("Unexpected " + describeCharacter(c));
+		}
+
+		return leadingWhitespace(parser, c);
+	},
+	yield: function (parser, c) {
+		parser.context.children.push({
+			type: "yield",
+			parent: parser.context,
+			unexpected: parser.error("Unexpected yield outside of macro", parser.identifierStart, parser.identifier.length),
+			position: parser.identifierStart,
+		});
+
+		return contentState(parser, c);
+	},
 };
 
 function parse(template, options) {
@@ -1069,6 +1371,12 @@ function parse(template, options) {
 		badInterpolations: null,
 		charCode: null,
 		code: null,
+		macroCallStart: null,
+		macroCallParameter: null,
+		macroCallParameterName: null,
+		macroCallParameterStart: null,
+		badMacroCallParameters: null,
+		macroParameterListStart: null,
 		getPosition: function () {
 			return {
 				line: position.line,
@@ -1242,6 +1550,14 @@ function parse(template, options) {
 
 				action(block);
 			}
+		}
+
+		for (var macroName in root.macros) {
+			if (macroName in parentTemplate.macros) {
+				throw new SyntaxError("Parent template " + root.extends + " already contains a macro named “" + macroName + "”.");
+			}
+
+			parentTemplate.macros[macroName] = root.macros[macroName];
 		}
 
 		return parentTemplate;

@@ -31,6 +31,59 @@ function passThrough(compiler, context, node) {
 	});
 }
 
+function getScriptIdentifier(templateIdentifier) {
+	return "_" + templateIdentifier.replace(/-/g, "_");
+}
+
+function resolveParameters(macro, node) {
+	var l = macro.parameters.length;
+	var results = new Array(l);
+	var i;
+	var parameter;
+
+	for (i = 0; i < l; i++) {
+		parameter = node.parameters[i];
+
+		if (parameter.name !== null) {
+			break;
+		}
+
+		results[i] = {
+			name: macro.parameters[i],
+			value: parameter.value,
+		};
+	}
+
+	for (; i < l; i++) {
+		parameter = node.parameters[i];
+		var parameterIndex = macro.parameters.indexOf(parameter.name);
+
+		if (parameterIndex === -1) {
+			throw parameter.nonexistent;
+		}
+
+		if (results[parameterIndex]) {
+			throw parameter.alreadyProvided;
+		}
+
+		results[parameterIndex] = parameter;
+	}
+
+	var missing = [];
+
+	for (i = 0; i < l; i++) {
+		if (!results[i]) {
+			missing.push(macro.parameters[i]);
+		}
+	}
+
+	if (missing.length !== 0) {
+		throw new SyntaxError("Missing values for parameters " + missing.join(", "));
+	}
+
+	return results;
+}
+
 function Scope() {
 	this.used = {};
 }
@@ -280,6 +333,121 @@ var transform = {
 			context.content.addCode(node.indexName + " = " + originalName + ";");
 		}
 	},
+	call: function (compiler, context, node) {
+		function isRecursive(call) {
+			return call.name === node.name;
+		}
+
+		if (!(node.name in compiler.tree.macros)) {
+			throw node.macroUndefined;
+		}
+
+		var macro = compiler.tree.macros[node.name];
+		var macroFunctions =
+			context.attributes ?
+				compiler.top.attributesMacroFunctions :
+				compiler.top.contentOnlyMacroFunctions;
+		var macroFunction = macroFunctions.get(node);
+		var parameters = resolveParameters(macro, node);
+
+		if (!macroFunction) {
+			if (!compiler.calls.some(isRecursive)) {
+				var pushContext = context.attributes || context.content;
+				var originalNames = parameters.map(function (parameter) {
+					var originalName = null;
+
+					if (hasOwnProperty.call(compiler.scope.used, parameter.name)) {
+						originalName = compiler.scope.getName("original_" + parameter.name);
+					}
+
+					pushContext.addCode("var " + parameter.name + " = " + wrapExpression(parameter.value) + ";");
+					return originalName;
+				});
+
+				compiler.calls.push(node);
+				macro.yieldContent = node.children;
+				passThrough(compiler, context, macro);
+				compiler.calls.pop();
+
+				parameters.forEach(function (parameter, i) {
+					var originalName = originalNames[i];
+
+					if (originalName) {
+						compiler.content.addCode(parameter.name + " = " + originalName + ";");
+					}
+				});
+
+				return;
+			}
+
+			macroFunction = compiler.scope.getName(getScriptIdentifier(node.name));
+			macroFunctions.set(node, macroFunction);
+
+			compiler.calls.push(node);
+
+			if (context.attributes) {
+				var newContext = {
+					content: new CodeBlock(),
+					attributes: new CodeBlock(),
+					classes: new CodeBlock(),
+				};
+
+				passThrough(compiler, newContext, macro);
+
+				var attributeOutputVariable = compiler.scope.getName("attributeOutput");
+				var classOutputVariable = compiler.scope.getName("classOutput");
+				var contentOutputVariable = compiler.scope.getName("contentOutput");
+
+				var definition =
+					"function " + macroFunction + "(" + macro.parameters.join(", ") + ") {\n" +
+						"var " + attributeOutputVariable + " = '" + newContext.attributes.toCode(attributeOutputVariable, "text") +
+						"var " + classOutputVariable + " = '" + newContext.classes.toCode(classOutputVariable, "text") +
+						"var " + contentOutputVariable + " = '" + newContext.content.toCode(contentOutputVariable, "text") +
+						"\n\nreturn { attributes: " + attributeOutputVariable + ", classes: " + classOutputVariable + ", content: " + contentOutputVariable + " };" +
+					"}\n";
+
+				compiler.top.macroDefinitions.push(definition);
+			} else {
+				context.content.addCode("function " + macroFunction + "(" + macro.parameters.join(", ") + ") {");
+				passThrough(compiler, context, macro);
+				context.content.addCode("}");
+			}
+
+			compiler.calls.pop();
+		}
+
+		var parameterList =
+			parameters
+				.map(function (parameter) {
+					return "(" + wrapExpression(parameter.value) + ")";
+				})
+				.join(", ");
+
+		if (context.attributes) {
+			var resultName = compiler.scope.getName("moutput");
+			context.attributes.addCode("var " + resultName + " = " + macroFunction + "(" + parameterList + ");");
+			context.attributes.addExpression(null, resultName + ".attributes");
+			context.classes.addExpression(null, resultName + ".classes");
+			context.content.addExpression(null, resultName + ".content");
+		} else {
+			context.content.addCode(macroFunction + "(" + parameterList + ");");
+		}
+	},
+	yield: function (compiler, context, node) {
+		var macro = node;
+
+		do {
+			macro = macro.parent;
+		} while (macro && macro.type !== "macro");
+
+		if (!macro) {
+			throw node.unexpected;
+		}
+
+		macro.yieldContent.forEach(function (yieldNode) {
+			compileNode(compiler, context, yieldNode);
+		});
+	},
 };
 
 function compileNode(compiler, context, node) {
@@ -295,14 +463,20 @@ function compileNode(compiler, context, node) {
 function compile(tree, options) {
 	var scope = new Scope();
 
+	var context = {
+		content: new CodeBlock(),
+		attributesMacroFunctions: new Map(),
+		contentOnlyMacroFunctions: new Map(),
+		macroDefinitions: [],
+	};
+
 	var compiler = {
 		scope: scope,
 		possibleConflicts: scope.used,
 		options: options,
-	};
-
-	var context = {
-		content: new CodeBlock(),
+		tree: tree,
+		top: context,
+		calls: [],
 	};
 
 	compileNode(compiler, context, tree);
@@ -310,6 +484,7 @@ function compile(tree, options) {
 	var outputVariable = scope.getName("output");
 
 	var code =
+		context.macroDefinitions.join("") +
 		"var " + outputVariable + " = '" + context.content.toCode(outputVariable, "text") +
 		"\n\nreturn " + outputVariable + ";";
 
