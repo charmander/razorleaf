@@ -69,6 +69,10 @@ function resolveParameters(macro, node) {
 		results[parameterIndex] = parameter;
 	}
 
+	if (i < node.parameters.length) {
+		throw node.parameters[i].unexpected;
+	}
+
 	var missing = [];
 
 	for (i = 0; i < l; i++) {

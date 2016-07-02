@@ -446,6 +446,7 @@ function macroCallParameterState(parser, c) {
 				position: parser.macroCallParameterStart,
 				alreadyProvided: parser.error("A value for the parameter “" + parser.macroCallParameterName + "” was already provided"),
 				nonexistent: parser.error("The macro “" + parser.context.name + "” does not accept a parameter named “" + parser.macroCallParameterName + "”"),
+				unexpected: parser.error("Too many arguments passed to macro “" + parser.context.name + "”", parser.macroCallParameterStart, parser.macroCallParameter.length),
 			});
 
 			if (c === ")") {
