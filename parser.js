@@ -798,6 +798,10 @@ keywords = {
 			throw parser.error("Unexpected block replacement in a root template", parser.identifierStart, parser.identifier.length);
 		}
 
+		if (parser.context !== parser.root) {
+			throw parser.error("Unexpected block replacement outside of root", parser.identifierStart, parser.identifier.length);
+		}
+
 		function leadingWhitespace(parser, c) {
 			if (c === " ") {
 				return leadingWhitespace;
@@ -845,6 +849,10 @@ keywords = {
 	append: function (parser, c) {
 		if (!parser.root.extends) {
 			throw parser.error("Unexpected block appension in a root template", parser.identifierStart, parser.identifier.length);
+		}
+
+		if (parser.context !== parser.root) {
+			throw parser.error("Unexpected block appension outside of root", parser.identifierStart, parser.identifier.length);
 		}
 
 		function leadingWhitespace(parser, c) {
