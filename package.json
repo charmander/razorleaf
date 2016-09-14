@@ -7,8 +7,10 @@
 		"compiler.js",
 		"parser.js",
 		"utilities.js",
-		"unicode.js"
+		"unicode.js",
+		"cli.js"
 	],
+	"bin": "cli.js",
 	"description": "A template engine for HTML",
 	"keywords": ["template"],
 	"repository": {
