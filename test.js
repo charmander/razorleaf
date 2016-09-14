@@ -221,7 +221,7 @@ function passes(test) {
 	}
 
 	console.log("\x1b[31m✘\x1b[0m \x1b[1m%s\x1b[0m failed", test.name);
-	console.log(error ? "  " + error.stack : "  Output: " + output);
+	console.log(error ? error.stack.replace(/^/gm, "  ") : "  Output: " + output);
 	return false;
 }
 
