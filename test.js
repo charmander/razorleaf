@@ -183,6 +183,14 @@ var tests = [
 		template: '"#{0)+(0}"',
 		expected: { error: "No interpolation is a valid JavaScript expression (of ['0)+(0'])" },
 	},
+	{
+		name: "included macros",
+		template: "include macros\ntest()",
+		include: {
+			macros: 'macro test()\n\t"pass"',
+		},
+		expected: { output: "pass" },
+	},
 ];
 
 function extend(a, b) {

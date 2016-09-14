@@ -212,6 +212,14 @@ var transform = {
 	include: function (compiler, context, node) {
 		var subtree = compiler.options.load(node.template);
 
+		for (var macroName in subtree.macros) {
+			if (macroName in compiler.tree.macros) {
+				throw new SyntaxError("Included template " + node.template + " redefines the macro named “" + macroName + "”.");
+			}
+
+			compiler.tree.macros[macroName] = subtree.macros[macroName];
+		}
+
 		compileNode(compiler, context, subtree);
 	},
 	if: function (compiler, context, node) {
