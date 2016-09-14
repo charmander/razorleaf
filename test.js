@@ -197,6 +197,11 @@ var tests = [
 		expected: { output: "pass" },
 	},
 	{
+		name: "recursive macros",
+		template: 'macro countdown(n)\n\tif n === 1\n\t\t| 1\n\telse\n\t\t"#{n}, " countdown(n - 1)\ncountdown(5)',
+		expected: { output: "5, 4, 3, 2, 1" },
+	},
+	{
 		name: "line strings",
 		template: "|  <em>hello, world</em>",
 		expected: { output: " <em>hello, world</em>" },
