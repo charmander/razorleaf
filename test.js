@@ -191,6 +191,11 @@ var tests = [
 		},
 		expected: { output: "pass" },
 	},
+	{
+		name: "line strings",
+		template: "|  <em>hello, world</em>",
+		expected: { output: " <em>hello, world</em>" },
+	},
 ];
 
 function extend(a, b) {
