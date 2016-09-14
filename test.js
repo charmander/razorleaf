@@ -37,6 +37,11 @@ var tests = [
 		expected: { output: "undefined" },
 	},
 	{
+		name: "non-conflicting output variable with escaped references",
+		template: '% var \\u006futput;\n"#{typeof \\u006futput}"',
+		expected: { output: "undefined" },
+	},
+	{
 		name: "including attributes",
 		template: "script include async",
 		include: {
