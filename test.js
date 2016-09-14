@@ -143,7 +143,7 @@ var tests = [
 		expected: { error: "Unexpected POWER SYMBOL" },
 	},
 	{
-		name: "Unspecified character",
+		name: "unspecified character",
 		template: "\udb40\ude00",
 		expected: { error: "Unexpected U+E0200" },
 	},
