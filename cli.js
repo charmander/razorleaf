@@ -91,7 +91,8 @@ function main() {
 			throw error;
 		}
 
-		var template = razorleaf.compile(templateSource);
+		var loader = new razorleaf.DirectoryLoader(".");
+		var template = razorleaf.compile(templateSource, loader.options);
 		process.stdout.write(template(data));
 	}
 
