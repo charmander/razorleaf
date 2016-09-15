@@ -198,13 +198,28 @@ var tests = [
 	},
 	{
 		name: "recursive macros",
-		template: 'macro countdown(n)\n\tif n === 1\n\t\t| 1\n\telse\n\t\t"#{n}, " countdown(n - 1)\ncountdown(5)',
-		expected: { output: "5, 4, 3, 2, 1" },
+		template: 'macro countdown(n)\n\tif n === 1\n\t\t| 1\n\telse\n\t\t"#{n}, " countdown(n - 1)\ncountdown(5)\n"; "\ncountdown(5)',
+		expected: { output: "5, 4, 3, 2, 1; 5, 4, 3, 2, 1" },
 	},
 	{
 		name: "line strings",
 		template: "|  <em>hello, world</em>",
 		expected: { output: " <em>hello, world</em>" },
+	},
+	{
+		name: "macros with conflicting variable names",
+		template: "% var x = 5;\nmacro test(x)\n\t| #{x},\ntest(12)\n| #{x}",
+		expected: { output: "12,5" },
+	},
+	{
+		name: "macro self-calls with different blocks",
+		template: "macro test() yield\ntest() test()",
+		expected: { output: "" },
+	},
+	{
+		name: "macro self-calls with different blocks in attribute context",
+		template: "macro test() yield\na test() test()",
+		expected: { output: "<a></a>" },
 	},
 ];
 
