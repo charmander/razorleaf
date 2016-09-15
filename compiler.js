@@ -390,6 +390,14 @@ var transform = {
 				}
 
 				pushContext.addCode("var " + parameter.name + " = " + wrapExpression(parameter.value) + ";");
+
+				if (originalName && context.attributes) {
+					var temporaryName = compiler.scope.getName("temporary_" + parameter.name);
+					context.attributes.addCode("var " + temporaryName + " = " + parameter.name + ";");
+					context.attributes.addCode(parameter.name + " = " + originalName + ";");
+					context.content.addCode(parameter.name + " = " + temporaryName + ";");
+				}
+
 				return originalName;
 			});
 

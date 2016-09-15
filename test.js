@@ -221,6 +221,11 @@ var tests = [
 		template: "macro test() yield\na test() test()",
 		expected: { output: "<a></a>" },
 	},
+	{
+		name: "repeated macros in attribute context",
+		template: "macro test(x) | #{x}\ndiv\n\ttest(1)\n\ttest(2)",
+		expected: { output: "<div>12</div>" },
+	},
 ];
 
 function extend(a, b) {
