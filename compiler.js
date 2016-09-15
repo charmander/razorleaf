@@ -223,20 +223,6 @@ var transform = {
 		compileNode(compiler, context, subtree);
 	},
 	if: function (compiler, context, node) {
-		var condition = wrapExpression(node.condition);
-
-		var newContext = {
-			content: new CodeBlock(),
-			attributes: context.attributes && new CodeBlock(),
-			classes: context.classes && new CodeBlock(),
-		};
-
-		var elseContext;
-
-		node.children.forEach(function (child) {
-			compileNode(compiler, newContext, child);
-		});
-
 		if (node.elif.length) {
 			node.else = {
 				children: [
@@ -250,6 +236,40 @@ var transform = {
 				],
 			};
 		}
+
+		if (node.condition === "yield") {
+			var macro = node;
+
+			do {
+				macro = macro.parent;
+			} while (macro && macro.type !== "macro");
+
+			if (!macro) {
+				throw node.unexpectedIfYield;
+			}
+
+			if (macro.yieldContent.length) {
+				passThrough(compiler, context, node);
+			} else if (node.else) {
+				passThrough(compiler, context, node.else);
+			}
+
+			return;
+		}
+
+		var condition = wrapExpression(node.condition);
+
+		var newContext = {
+			content: new CodeBlock(),
+			attributes: context.attributes && new CodeBlock(),
+			classes: context.classes && new CodeBlock(),
+		};
+
+		var elseContext;
+
+		node.children.forEach(function (child) {
+			compileNode(compiler, newContext, child);
+		});
 
 		if (node.else) {
 			elseContext = {

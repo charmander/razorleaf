@@ -961,6 +961,7 @@ keywords = {
 					children: [],
 					indent: parser.indent,
 					position: parser.getPosition(),
+					unexpectedIfYield: parser.error("Unexpected if yield outside of macro"),
 				};
 
 				parser.context.parent.children.push(parser.context);
