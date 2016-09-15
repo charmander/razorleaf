@@ -381,6 +381,7 @@ var transform = {
 
 		if (recursiveIndex === -1) {
 			var pushContext = context.attributes || context.content;
+			var popContext = context.content || context.attributes;
 			var originalNames = parameters.map(function (parameter) {
 				var originalName = null;
 
@@ -391,7 +392,7 @@ var transform = {
 
 				pushContext.addCode("var " + parameter.name + " = " + wrapExpression(parameter.value) + ";");
 
-				if (originalName && context.attributes) {
+				if (originalName && context.attributes && context.content) {
 					var temporaryName = compiler.scope.getName("temporary_" + parameter.name);
 					context.attributes.addCode("var " + temporaryName + " = " + parameter.name + ";");
 					context.attributes.addCode(parameter.name + " = " + originalName + ";");
@@ -410,7 +411,7 @@ var transform = {
 				var originalName = originalNames[i];
 
 				if (originalName) {
-					context.content.addCode(parameter.name + " = " + originalName + ";");
+					popContext.addCode(parameter.name + " = " + originalName + ";");
 				}
 			});
 

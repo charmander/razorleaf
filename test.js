@@ -226,6 +226,11 @@ var tests = [
 		template: "macro test(x) | #{x}\ndiv\n\ttest(1)\n\ttest(2)",
 		expected: { output: "<div>12</div>" },
 	},
+	{
+		name: "macro with conflicting variable name in void element context",
+		template: "% var x = 5;\nmacro test(x)\nimg test(12)",
+		expected: { output: "<img>" },
+	},
 ];
 
 function extend(a, b) {
