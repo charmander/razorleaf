@@ -382,24 +382,26 @@ var transform = {
 		if (recursiveIndex === -1) {
 			var pushContext = context.attributes || context.content;
 			var popContext = context.content || context.attributes;
-			var originalNames = parameters.map(function (parameter) {
+			var namesInfo = parameters.map(function (parameter) {
 				var originalName = null;
+				var temporaryName = null;
 
 				if (hasOwnProperty.call(compiler.scope.used, parameter.name)) {
 					originalName = compiler.scope.getName("original_" + parameter.name);
 					pushContext.addCode("var " + originalName + " = " + parameter.name + ";");
+
+					if (context.attributes && context.content) {
+						temporaryName = compiler.scope.getName("temporary_" + parameter.name);
+						context.content.addCode(parameter.name + " = " + temporaryName + ";");
+					}
 				}
 
 				pushContext.addCode("var " + parameter.name + " = " + wrapExpression(parameter.value) + ";");
 
-				if (originalName && context.attributes && context.content) {
-					var temporaryName = compiler.scope.getName("temporary_" + parameter.name);
-					context.attributes.addCode("var " + temporaryName + " = " + parameter.name + ";");
-					context.attributes.addCode(parameter.name + " = " + originalName + ";");
-					context.content.addCode(parameter.name + " = " + temporaryName + ";");
-				}
-
-				return originalName;
+				return {
+					originalName: originalName,
+					temporaryName: temporaryName,
+				};
 			});
 
 			compiler.calls.push(node);
@@ -408,10 +410,15 @@ var transform = {
 			compiler.calls.pop();
 
 			parameters.forEach(function (parameter, i) {
-				var originalName = originalNames[i];
+				var nameInfo = namesInfo[i];
 
-				if (originalName) {
-					popContext.addCode(parameter.name + " = " + originalName + ";");
+				if (nameInfo.originalName) {
+					if (nameInfo.temporaryName) {
+						context.attributes.addCode("var " + nameInfo.temporaryName + " = " + parameter.name + ";");
+						context.attributes.addCode(parameter.name + " = " + nameInfo.originalName + ";");
+					}
+
+					popContext.addCode(parameter.name + " = " + nameInfo.originalName + ";");
 				}
 			});
 
