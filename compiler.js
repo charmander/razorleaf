@@ -93,8 +93,14 @@ function Scope() {
 }
 
 Scope.prototype.getName = function (name) {
-	while (hasOwnProperty.call(this.used, name)) {
-		name += "_";
+	if (hasOwnProperty.call(this.used, name)) {
+		var i = 1;
+
+		while (hasOwnProperty.call(this.used, name + "_" + i)) {
+			i++;
+		}
+
+		name += "_" + i;
 	}
 
 	this.used[name] = true;
