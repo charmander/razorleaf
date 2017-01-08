@@ -39,7 +39,7 @@ var JS_RESERVED_WORDS = new Set([
 var singleCharEscapes = Object.assign(
 	Object.create(null),
 	{
-		"\\": "\\\\",
+		"\\": "\\",
 		n: "\n",
 		r: "\r",
 		t: "\t",

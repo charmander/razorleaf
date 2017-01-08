@@ -27,6 +27,11 @@ var tests = [
 		expected: { output: 'println!("Hello, world!")' },
 	},
 	{
+		name: "escaped backslash",
+		template: '"\\\\"',
+		expected: { output: '\\' },
+	},
+	{
 		name: "comment after boolean attribute",
 		template: "div\n\tdata-test:\n\t# comment",
 		expected: { output: "<div data-test></div>" },
