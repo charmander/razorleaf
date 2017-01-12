@@ -16,16 +16,61 @@ function escapeLiteral(text) {
 }
 
 function escapeAttributeValue(value) {
-	return ("" + value)
-		.replace(/&/g, "&amp;")
-		.replace(/"/g, "&quot;");
+	var value_ = "" + value;
+	var result = "";
+	var start = 0;
+
+	for (var i = 0; i < value_.length; i++) {
+		var c = value_.charCodeAt(i);
+		var escaped;
+
+		if (c === 38) {
+			escaped = "&amp;";
+		} else if (c === 34) {
+			escaped = "&#34;";
+		} else {
+			continue;
+		}
+
+		if (start !== i) {
+			result += value_.substring(start, i);
+		}
+
+		result += escaped;
+		start = i + 1;
+	}
+
+	return result + value_.substring(start);
 }
 
 function escapeContent(value) {
-	return ("" + value)
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;");
+	var value_ = "" + value;
+	var result = "";
+	var start = 0;
+
+	for (var i = 0; i < value_.length; i++) {
+		var c = value_.charCodeAt(i);
+		var escaped;
+
+		if (c === 38) {
+			escaped = "&amp;";
+		} else if (c === 60) {
+			escaped = "&lt;";
+		} else if (c === 62) {
+			escaped = "&gt;";
+		} else {
+			continue;
+		}
+
+		if (start !== i) {
+			result += value_.substring(start, i);
+		}
+
+		result += escaped;
+		start = i + 1;
+	}
+
+	return result + value_.substring(start);
 }
 
 function CodeBlock() {
