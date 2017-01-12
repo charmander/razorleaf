@@ -553,12 +553,12 @@ function compile(tree, options) {
 	}
 
 	return vm.runInNewContext(
-		"'use strict';\n" +
+		"(function () { 'use strict';\n" +
 		utilities.escapeAttributeValue + "\n" +
 		utilities.escapeContent + "\n\n" +
-		"(function template(data) {\n" + code + "\n})",
+		"return function template(data) {\n" + code + "\n}; })",
 		options.globals, options.name
-	);
+	)();
 }
 
 exports.constructor = { name: "razorleaf.compiler" };
