@@ -89,14 +89,14 @@ function resolveParameters(macro, node) {
 }
 
 function Scope() {
-	this.used = {};
+	this.used = Object.create(null);
 }
 
 Scope.prototype.getName = function (name) {
-	if (hasOwnProperty.call(this.used, name)) {
+	if (name in this.used) {
 		var i = 1;
 
-		while (hasOwnProperty.call(this.used, name + "_" + i)) {
+		while ((name + "_" + i) in this.used) {
 			i++;
 		}
 
@@ -349,7 +349,7 @@ var transform = {
 		context.content.addCode("var " + collectionName + " = (" + collection + ");");
 
 		if (node.indexName) {
-			if (hasOwnProperty.call(compiler.scope.used, node.indexName)) {
+			if (node.indexName in compiler.scope.used) {
 				originalName = compiler.scope.getName("original");
 
 				context.content.addCode("var " + originalName + " = " + node.indexName + ";");
@@ -392,7 +392,7 @@ var transform = {
 				var originalName = null;
 				var temporaryName = null;
 
-				if (hasOwnProperty.call(compiler.scope.used, parameter.name)) {
+				if (parameter.name in compiler.scope.used) {
 					originalName = compiler.scope.getName("original_" + parameter.name);
 					pushContext.addCode("var " + originalName + " = " + parameter.name + ";");
 
