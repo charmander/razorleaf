@@ -28,8 +28,11 @@ function evalExpression(js) {
 	var isExpression;
 
 	try {
-		// eslint-disable-next-line no-new
-		new Function("'use strict'; (" + js + "\n); void " + js);
+		/* eslint-disable no-new */
+		new Function("'use strict'; (" + js + "\n)");
+		new Function("'use strict'; void " + js);
+
+		/* eslint-enable no-new */
 		isExpression = true;
 	} catch (error) {
 		isExpression = false;

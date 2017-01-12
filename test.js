@@ -189,9 +189,14 @@ var tests = [
 		expected: { error: "Expected escape sequence" },
 	},
 	{
-		name: "bad interpolation",
+		name: "bad interpolation for ()",
 		template: '"#{0)+(0}"',
 		expected: { error: "No interpolation is a valid JavaScript expression (of ['0)+(0'])" },
+	},
+	{
+		name: "bad interpolation for () + void combined",
+		template: '"#{/*/0)}"',
+		expected: { error: "No interpolation is a valid JavaScript expression (of ['/*/0)'])" },
 	},
 	{
 		name: "included macros",
