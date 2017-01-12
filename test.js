@@ -217,6 +217,11 @@ var tests = [
 		expected: { output: " <em>hello, world</em>" },
 	},
 	{
+		name: "incorrect escapes in line strings",
+		template: '| \\"',
+		expected: { error: "Expected escape sequence" },
+	},
+	{
 		name: "macros with conflicting variable names",
 		template: "% var x = 5;\nmacro test(x)\n\t| #{x},\ntest(12)\n| #{x}",
 		expected: { output: "12,5" },

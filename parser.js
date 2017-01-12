@@ -607,7 +607,7 @@ function interpolationState(parser, c) {
 }
 
 function escapeState(parser, c) {
-	if (c === "#" || c === '"') {
+	if (c === "#" || (c === '"' && parser.stringType === STRING_TYPE_QUOTED)) {
 		parser.string.addText(c);
 		return stringState;
 	}
