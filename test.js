@@ -29,7 +29,7 @@ var tests = [
 	{
 		name: "escaped backslash",
 		template: '"\\\\"',
-		expected: { output: '\\' },
+		expected: { output: "\\" },
 	},
 	{
 		name: "comment after boolean attribute",

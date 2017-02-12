@@ -1,7 +1,65 @@
-Razor Leaf is a template engine for JavaScript with a convenient
-indentation-based syntax. It aims to reduce the redundancy inherent in HTML
-with simple rules, a sparse syntax, and a few further features not found
-in larger libraries.
+Razor Leaf is an HTML template engine for Node.js.
+
+
+## Features
+
+- automatic escaping
+
+- template inheritance
+
+- recursive macros
+
+- conditional attributes and classes
+
+- no extraneous rendered whitespace
+
+- no dependencies\*
+
+- unrestricted JavaScript expressions and inline code; no sandboxes to work around
+
+<small>\* This might change.</small>
+
+
+## Example
+
+`example.rl`:
+
+```
+doctype html
+	head
+		meta charset: "utf-8"
+		meta name: "viewport" content: "initial-scale=1"
+
+		title | Example
+	body
+		h1 | Hello, world!
+
+		% const { left, right } = data;
+		p | #{left} × #{right} = #{left * right}
+```
+
+`example.js`:
+
+```javascript
+const razorleaf = require('razorleaf');
+
+const templateLoader = new razorleaf.DirectoryLoader(__dirname);
+const template = templateLoader.load('example');
+
+console.log(
+	template({
+		left: 9,
+		right: 12,
+	})
+);
+```
+
+Output:
+
+> # Hello, world!
+
+> 9 × 12 = 108
+
 
 ## Syntax
 
