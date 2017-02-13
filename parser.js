@@ -1435,11 +1435,12 @@ function parse(template, options) {
 		},
 		error: function (message, displayPosition, extent) {
 			var where = displayPosition || position;
+			var defaultExtent = isLeadingSurrogate(template.charCodeAt(where)) ? 2 : 1;
 
 			return new TemplateError(message, {
 				position: where,
 				name: options.name,
-				context: getContext(template, where, extent || 1),
+				context: getContext(template, where, extent || defaultExtent),
 			});
 		},
 		warn: function (message, displayPosition) {
