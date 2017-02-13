@@ -135,27 +135,7 @@ var tests = [
 	{
 		name: "character with two-byte UTF-16 representation",
 		template: "𝑎",
-		expected: { error: "Unexpected MATHEMATICAL ITALIC SMALL A" },
-	},
-	{
-		name: "Unicode 7.0",
-		template: "\u1ab0",
-		expected: { error: "Unexpected COMBINING DOUBLED CIRCUMFLEX ACCENT" },
-	},
-	{
-		name: "Unicode 8.0",
-		template: "\ud83e\udd16",
-		expected: { error: "Unexpected ROBOT FACE" },
-	},
-	{
-		name: "Unicode 9.0",
-		template: "\u23fb",
-		expected: { error: "Unexpected POWER SYMBOL" },
-	},
-	{
-		name: "unspecified character",
-		template: "\udb40\ude00",
-		expected: { error: "Unexpected U+E0200" },
+		expected: { error: "Unexpected U+1D44E" },
 	},
 	{
 		name: "initial multiple-tab indentation",

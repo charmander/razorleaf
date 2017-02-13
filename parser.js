@@ -88,8 +88,7 @@ function describeCharacter(c) {
 		}
 	}
 
-	// eslint-disable-next-line global-require
-	return require("./unicode")[code] || "U+" + code.toString(16).toUpperCase();
+	return "U+" + code.toString(16).toUpperCase();
 }
 
 function describeList(list, maxLength) {
