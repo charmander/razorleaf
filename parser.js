@@ -1,7 +1,6 @@
 /* eslint-disable no-shadow */
 "use strict";
 
-var util = require("util");
 var utilities = require("./utilities");
 var CodeBlock = utilities.CodeBlock;
 var push = Array.prototype.push;
@@ -91,10 +90,18 @@ function describeCharacter(c) {
 	return "U+" + code.toString(16).toUpperCase();
 }
 
+function describeString(s) {
+	var json = JSON.stringify(s);
+
+	return s.indexOf("'") === -1 ?
+		"'" + json.slice(1, -1).replace(/\\"/g, '"') + "'" :
+		json;
+}
+
 function describeList(list, maxLength) {
 	var itemDescriptions =
 		list.slice(0, maxLength)
-			.map(util.inspect)
+			.map(describeString)
 			.join(", ");
 
 	return list.length > maxLength ?
