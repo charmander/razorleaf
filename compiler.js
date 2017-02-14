@@ -1,12 +1,91 @@
 "use strict";
 
-var vm = require("vm");
 var utilities = require("./utilities");
 var CodeBlock = utilities.CodeBlock;
 
 var POSSIBLE_COMMENT = /\/\/|<!--/;
 
+var IDENTIFIER_ESCAPE = /\\u([\dA-Fa-f]{4})/g;
+
+// Simplified because ES6 uses the ID_Start and ID_Continue Unicode properties
+var SIMPLE_IDENTIFIER = /^[a-zA-Z_$][\w_$]*$/;
+
+var RESERVED_WORDS = [
+	// Keyword
+	"break",
+	"case",
+	"catch",
+	"class",
+	"const",
+	"continue",
+	"debugger",
+	"default",
+	"delete",
+	"do",
+	"else",
+	"export",
+	"extends",
+	"finally",
+	"for",
+	"function",
+	"if",
+	"import",
+	"in",
+	"instanceof",
+	"new",
+	"return",
+	"super",
+	"switch",
+	"this",
+	"throw",
+	"try",
+	"typeof",
+	"var",
+	"void",
+	"while",
+	"with",
+	"yield",
+
+	// FutureReservedWord
+	"enum",
+
+	// Strict mode FutureReservedWord
+	"implements",
+	"interface",
+	"package",
+	"private",
+	"protected",
+	"public",
+
+	// NullLiteral
+	"null",
+
+	// BooleanLiteral
+	"true",
+	"false",
+
+	// Additional forbidden `Identifier`s in strict mode
+	"let",
+
+	// Additional forbidden `BindingIdentifier`s in strict mode
+	"arguments",
+	"eval",
+];
+
 var voidTags = utilities.voidTags;
+
+function parseIdentifierEscape(match, identifierEscape) {
+	return String.fromCharCode(parseInt(identifierEscape, 16));
+}
+
+function isIdentifier(text) {
+	var unescaped = text.replace(IDENTIFIER_ESCAPE, parseIdentifierEscape);
+
+	return (
+		SIMPLE_IDENTIFIER.test(unescaped) &&
+		RESERVED_WORDS.indexOf(unescaped) === -1
+	);
+}
 
 function wrapExpression(expression) {
 	return POSSIBLE_COMMENT.test(expression) ? expression + "\n" : expression;
@@ -552,13 +631,29 @@ function compile(tree, options) {
 		console.log(code);
 	}
 
-	return vm.runInNewContext(
-		"(function () { 'use strict';\n" +
+	var globalUnpack = "";
+
+	if (options.globals !== undefined) {
+		globalUnpack =
+			Object.keys(options.globals)
+				.map(function (name) {
+					if (!isIdentifier(name)) {
+						throw new Error("Template global “" + name + "” is not a valid identifier");
+					}
+
+					return "var " + name + " = globals." + name + ";\n";
+				})
+				.join("");
+	}
+
+	return new Function(
+		"globals",
+		"'use strict';\n" +
+		globalUnpack +
 		utilities.escapeAttributeValue + "\n" +
 		utilities.escapeContent + "\n\n" +
-		"return function template(data) {\n" + code + "\n}; })",
-		options.globals, options.name
-	)();
+		"return function template(data) {\n" + code + "\n};"
+	)(options.globals);
 }
 
 exports.constructor = { name: "razorleaf.compiler" };
