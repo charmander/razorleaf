@@ -5,6 +5,7 @@ var fs = require("fs");
 var vm = require("vm");
 
 var razorleaf = require("./");
+var DirectoryLoader = require("./directory-loader").DirectoryLoader;
 
 function showUsage() {
 	console.error("Usage: razorleaf [-d|--data <expression>] [<template file>]");
@@ -94,7 +95,7 @@ function main() {
 			throw error;
 		}
 
-		var loader = new razorleaf.DirectoryLoader(".");
+		var loader = new DirectoryLoader(".");
 		var template = razorleaf.compile(templateSource, loader.options);
 		process.stdout.write(template(data));
 	}

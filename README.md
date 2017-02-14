@@ -41,9 +41,9 @@ doctype html
 `example.js`:
 
 ```javascript
-const razorleaf = require('razorleaf');
+const DirectoryLoader = require('razorleaf/directory-loader');
 
-const templateLoader = new razorleaf.DirectoryLoader(__dirname);
+const templateLoader = new DirectoryLoader(__dirname);
 const template = templateLoader.load('example');
 
 console.log(
