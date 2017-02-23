@@ -17,8 +17,18 @@ var tests = [
 		expected: { output: "37" },
 	},
 	{
+		name: "content escaping",
+		template: '"#{"<>&\\"<>&\\""}"',
+		expected: { output: '&lt;>&amp;"&lt;>&amp;"' },
+	},
+	{
+		name: "attribute escaping",
+		template: 'div data-test: "#{"<>&\\"<>&\\""}"',
+		expected: { output: '<div data-test="<>&amp;&#34;<>&amp;&#34;"></div>' },
+	},
+	{
 		name: "unescaped expression",
-		template: '!"#{\"unsafe\"}"',
+		template: '!"#{"unsafe"}"',
 		expected: { output: "unsafe" },
 	},
 	{

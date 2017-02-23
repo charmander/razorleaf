@@ -56,8 +56,6 @@ function escapeContent(value) {
 			escaped = "&amp;";
 		} else if (c === 60) {
 			escaped = "&lt;";
-		} else if (c === 62) {
-			escaped = "&gt;";
 		} else {
 			continue;
 		}
