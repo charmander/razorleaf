@@ -35,6 +35,8 @@ var JS_RESERVED_WORDS = new Set([
 	"yield",
 ]);
 
+var optimisticError = Object.create(null);
+
 var singleCharEscapes = Object.assign(
 	Object.create(null),
 	{
@@ -1339,7 +1341,7 @@ keywords = {
 	},
 };
 
-function parse(template, options) {
+function parseWithExpectation(template, options, expectError) {
 	var i;
 
 	var root = {
@@ -1441,6 +1443,11 @@ function parse(template, options) {
 			};
 		},
 		error: function (message, displayPosition, extent) {
+			if (!expectError) {
+				// Avoid capturing the stack trace unnecessarily
+				return optimisticError;
+			}
+
 			var where = displayPosition || position;
 			var defaultExtent = isLeadingSurrogate(template.charCodeAt(where)) ? 2 : 1;
 
@@ -1451,7 +1458,7 @@ function parse(template, options) {
 			});
 		},
 		warn: function (message, displayPosition) {
-			if (!options.debug) {
+			if (!options.debug || expectError) {
 				return;
 			}
 
@@ -1621,6 +1628,18 @@ function parse(template, options) {
 	}
 
 	return root;
+}
+
+function parse(template, options) {
+	try {
+		return parseWithExpectation(template, options, false);
+	} catch (error) {
+		if (error !== optimisticError) {
+			throw error;
+		}
+
+		return parseWithExpectation(template, options, true);
+	}
 }
 
 exports.constructor = { name: "razorleaf.parser" };
