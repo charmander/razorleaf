@@ -26,16 +26,16 @@ Razor Leaf is an HTML template engine for Node.js.
 
 ```
 doctype html
-	head
-		meta charset: "utf-8"
-		meta name: "viewport" content: "initial-scale=1"
+    head
+        meta charset: "utf-8"
+        meta name: "viewport" content: "initial-scale=1"
 
-		title "Example"
-	body
-		h1 "Hello, world!"
+        title "Example"
+    body
+        h1 "Hello, world!"
 
-		% const { left, right } = data;
-		p "#{left} × #{right} = #{left * right}"
+        % const { left, right } = data;
+        p "#{left} × #{right} = #{left * right}"
 ```
 
 `example.js`:
@@ -47,10 +47,10 @@ const templateLoader = new DirectoryLoader(__dirname);
 const template = templateLoader.load('example');
 
 console.log(
-	template({
-		left: 9,
-		right: 12,
-	})
+    template({
+        left: 9,
+        right: 12,
+    })
 );
 ```
 
@@ -145,7 +145,7 @@ Classes are marked up with a leading period, as in <code>.<i>class</i></code>.
 
 ```
 fieldset .upload-meta
-	input.required
+    input.required
 ```
 
 ```html
@@ -160,19 +160,19 @@ Hierarchy in Razor Leaf is defined using indentation. For example:
 doctype
 
 html
-	head
-		meta charset: "utf-8"
+    head
+        meta charset: "utf-8"
 
-		title "Example"
+        title "Example"
 
-		link
-			rel: "stylesheet"
-			type: "text/css"
-			href: "stylesheets/example.css"
+        link
+            rel: "stylesheet"
+            type: "text/css"
+            href: "stylesheets/example.css"
 
-	body
-		p id: "introduction"
-			"This template is a brief example of hierarchy."
+    body
+        p id: "introduction"
+            "This template is a brief example of hierarchy."
 ```
 
 ```html
@@ -198,8 +198,8 @@ For example, this template:
 
 ```
 % function countTo(n)
-	% for (var i = 1; i <= n; i++)
-		"#{i}"
+    % for (var i = 1; i <= n; i++)
+        "#{i}"
 
 % countTo(5);
 ```
@@ -208,9 +208,9 @@ might compile to this JavaScript:
 
 ```javascript
 function countTo(n) {
-	for (var i = 1; i <= n; i++) {
-		output += i;
-	}
+    for (var i = 1; i <= n; i++) {
+        output += i;
+    }
 }
 
 countTo(5);
