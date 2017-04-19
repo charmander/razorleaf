@@ -6,7 +6,6 @@
 		"compiler.js",
 		"parser.js",
 		"utilities.js",
-		"unicode.js",
 		"cli.js"
 	],
 	"bin": "cli.js",
