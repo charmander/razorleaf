@@ -1642,6 +1642,5 @@ function parse(template, options) {
 	}
 }
 
-exports.constructor = { name: "razorleaf.parser" };
 exports.parse = parse;
 exports.keywords = keywords;

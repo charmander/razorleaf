@@ -656,6 +656,5 @@ function compile(tree, options) {
 	)(options.globals);
 }
 
-exports.constructor = { name: "razorleaf.compiler" };
 exports.compile = compile;
 exports.transform = transform;

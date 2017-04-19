@@ -31,6 +31,5 @@ function compile(template, options) {
 	return compiler.compile(tree, options);
 }
 
-exports.constructor = { name: "razorleaf" };
 exports.compile = compile;
 exports.defaults = defaults;
