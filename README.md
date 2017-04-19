@@ -30,12 +30,12 @@ doctype html
 		meta charset: "utf-8"
 		meta name: "viewport" content: "initial-scale=1"
 
-		title | Example
+		title "Example"
 	body
-		h1 | Hello, world!
+		h1 "Hello, world!"
 
 		% const { left, right } = data;
-		p | #{left} × #{right} = #{left * right}
+		p "#{left} × #{right} = #{left * right}"
 ```
 
 `example.js`:

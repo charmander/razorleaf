@@ -216,22 +216,12 @@ var tests = [
 	},
 	{
 		name: "recursive macros",
-		template: 'macro countdown(n)\n\tif n === 1\n\t\t| 1\n\telse\n\t\t"#{n}, " countdown(n - 1)\ncountdown(5)\n"; "\ncountdown(5)',
+		template: 'macro countdown(n)\n\tif n === 1\n\t\t"1"\n\telse\n\t\t"#{n}, " countdown(n - 1)\ncountdown(5)\n"; "\ncountdown(5)',
 		expected: { output: "5, 4, 3, 2, 1; 5, 4, 3, 2, 1" },
 	},
 	{
-		name: "line strings",
-		template: "|  <em>hello, world</em>",
-		expected: { output: " <em>hello, world</em>" },
-	},
-	{
-		name: "incorrect escapes in line strings",
-		template: '| \\"',
-		expected: { error: "Expected escape sequence" },
-	},
-	{
 		name: "macros with conflicting variable names",
-		template: "% var x = 5;\nmacro test(x)\n\t| #{x},\ntest(12)\n| #{x}",
+		template: '% var x = 5;\nmacro test(x)\n\t"#{x},"\ntest(12)\n"#{x}"',
 		expected: { output: "12,5" },
 	},
 	{
@@ -246,7 +236,7 @@ var tests = [
 	},
 	{
 		name: "repeated macros in attribute context",
-		template: "macro test(x) | #{x}\ndiv\n\ttest(1)\n\ttest(2)",
+		template: 'macro test(x) "#{x}"\ndiv\n\ttest(1)\n\ttest(2)',
 		expected: { output: "<div>12</div>" },
 	},
 	{

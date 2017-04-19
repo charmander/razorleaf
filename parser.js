@@ -5,8 +5,6 @@ var utilities = require("./utilities");
 var CodeBlock = utilities.CodeBlock;
 var push = Array.prototype.push;
 
-var STRING_TYPE_QUOTED = 0;
-var STRING_TYPE_LINE = 1;
 var HEX = /[\da-fA-F]/;
 var DIGIT = /\d/;
 var IDENTIFIER = /[\w-]/;
@@ -219,7 +217,6 @@ function contentState(parser, c) {
 		parser.escapeFunction = "unwrapMarkup";
 		parser.literalEscapeFunction = null;
 		parser.stringStart = parser.getPosition();
-		parser.stringType = STRING_TYPE_QUOTED;
 		return rawStringState;
 	}
 
@@ -235,7 +232,6 @@ function contentState(parser, c) {
 		}
 
 		parser.stringStart = parser.getPosition();
-		parser.stringType = STRING_TYPE_QUOTED;
 		return stringState;
 	}
 
@@ -246,15 +242,6 @@ function contentState(parser, c) {
 	if (c === "%") {
 		parser.code = "";
 		return codeState;
-	}
-
-	if (c === "|") {
-		parser.string = new CodeBlock();
-		parser.escapeFunction = "escapeContent";
-		parser.literalEscapeFunction = null;
-		parser.stringStart = parser.getPosition();
-		parser.stringType = STRING_TYPE_LINE;
-		return lineStringSpaceState;
 	}
 
 	if (isIdentifierCharacter(c)) {
@@ -532,37 +519,13 @@ function doubleRawStringState(parser, c) {
 	return stringState;
 }
 
-function lineStringSpaceState(parser, c) {
-	if (c !== " ") {
-		throw parser.error("Expected space before text of line string, not " + describeCharacter(c), parser.stringStart, parser.getPosition().index - parser.stringStart.index + 2);
-	}
-
-	return stringState;
-}
-
 function stringState(parser, c) {
-	var string;
-
-	if (parser.stringType === STRING_TYPE_LINE && (c === "\n" || c === null)) {
-		string = {
-			type: "string",
-			value: parser.string,
-			parent: parser.context,
-			unexpected: parser.error("Unexpected string", parser.stringStart, parser.getPosition().index - parser.stringStart.index + 1),
-			position: parser.stringStart,
-		};
-
-		parser.context.children.push(string);
-
-		return contentState(parser, c);
-	}
-
 	if (c === null) {
 		throw parser.error("Expected end of string before end of file");
 	}
 
-	if (parser.stringType === STRING_TYPE_QUOTED && c === '"') {
-		string = {
+	if (c === '"') {
+		var string = {
 			type: "string",
 			value: parser.string,
 			parent: parser.context,
@@ -638,7 +601,7 @@ function interpolationState(parser, c) {
 }
 
 function escapeState(parser, c) {
-	if (c === "#" || (c === '"' && parser.stringType === STRING_TYPE_QUOTED)) {
+	if (c === "#" || c === '"') {
 		parser.string.addText(c);
 		return stringState;
 	}
@@ -1445,7 +1408,6 @@ function parseWithExpectation(template, options, expectError) {
 		raw: null,
 		string: null,
 		stringStart: null,
-		stringType: null,
 		escapeFunction: null,
 		literalEscapeFunction: null,
 		interpolation: null,
