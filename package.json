@@ -1,9 +1,8 @@
 {
 	"name": "razorleaf",
 	"version": "3.3.1",
-	"main": "razorleaf.js",
 	"files": [
-		"razorleaf.js",
+		"index.js",
 		"compiler.js",
 		"parser.js",
 		"utilities.js",
