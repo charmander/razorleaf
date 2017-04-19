@@ -647,13 +647,16 @@ function compile(tree, options) {
 	}
 
 	return new Function(
-		"globals",
+		"escapeAttributeValue, escapeContent, unwrapMarkup, globals",
 		"'use strict';\n" +
 		globalUnpack +
-		utilities.escapeAttributeValue + "\n" +
-		utilities.escapeContent + "\n\n" +
 		"return function template(data) {\n" + code + "\n};"
-	)(options.globals);
+	)(
+		utilities.escapeAttributeValue,
+		utilities.escapeContent,
+		utilities.unwrapMarkup,
+		options.globals
+	);
 }
 
 exports.compile = compile;

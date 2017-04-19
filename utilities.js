@@ -5,6 +5,27 @@ var voidTags = [
 	"keygen", "link", "meta", "param", "source", "track", "wbr",
 ];
 
+function Markup(parts) {
+	if (!Array.isArray(parts) || !("raw" in parts)) {
+		throw new TypeError("Markup should be written as a template string tag, as in Markup`<br>`; use Markup.unsafe() to create an instance from an arbitrary string.");
+	}
+
+	if (parts.length !== 1) {
+		throw new TypeError("Template literal used with Markup should not have ${…} substitutions");
+	}
+
+	return Markup.unsafe(parts[0]);
+}
+
+Markup.unsafe = function (html) {
+	return Object.create(Markup.prototype, {
+		_html: {
+			configurable: true,
+			value: html,
+		},
+	});
+};
+
 function escapeLiteral(text) {
 	return text
 		.replace(/\\/g, "\\\\")
@@ -69,6 +90,14 @@ function escapeContent(value) {
 	}
 
 	return result + value_.substring(start);
+}
+
+function unwrapMarkup(markup) {
+	if (!(markup instanceof Markup)) {
+		throw new TypeError("Unescaped content must be an instance of Markup");
+	}
+
+	return markup._html;
 }
 
 function CodeBlock() {
@@ -171,7 +200,9 @@ CodeBlock.prototype.toCode = function (outputVariable, initialState) {
 	return code;
 };
 
+exports.CodeBlock = CodeBlock;
+exports.Markup = Markup;
 exports.escapeAttributeValue = escapeAttributeValue;
 exports.escapeContent = escapeContent;
-exports.CodeBlock = CodeBlock;
+exports.unwrapMarkup = unwrapMarkup;
 exports.voidTags = voidTags;

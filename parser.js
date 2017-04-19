@@ -216,7 +216,8 @@ function contentState(parser, c) {
 
 	if (c === "!") {
 		parser.string = new CodeBlock();
-		parser.escapeFunction = null;
+		parser.escapeFunction = "unwrapMarkup";
+		parser.literalEscapeFunction = null;
 		parser.stringStart = parser.getPosition();
 		parser.stringType = STRING_TYPE_QUOTED;
 		return rawStringState;
@@ -224,7 +225,15 @@ function contentState(parser, c) {
 
 	if (c === '"') {
 		parser.string = new CodeBlock();
-		parser.escapeFunction = parser.context.type === "attribute" ? "escapeAttributeValue" : "escapeContent";
+
+		if (parser.context.type === "attribute") {
+			parser.escapeFunction = "escapeAttributeValue";
+			parser.literalEscapeFunction = utilities.escapeAttributeValue;
+		} else {
+			parser.escapeFunction = "escapeContent";
+			parser.literalEscapeFunction = utilities.escapeContent;
+		}
+
 		parser.stringStart = parser.getPosition();
 		parser.stringType = STRING_TYPE_QUOTED;
 		return stringState;
@@ -242,6 +251,7 @@ function contentState(parser, c) {
 	if (c === "|") {
 		parser.string = new CodeBlock();
 		parser.escapeFunction = "escapeContent";
+		parser.literalEscapeFunction = null;
 		parser.stringStart = parser.getPosition();
 		parser.stringType = STRING_TYPE_LINE;
 		return lineStringSpaceState;
@@ -502,6 +512,19 @@ function macroCallParameterState(parser, c) {
 }
 
 function rawStringState(parser, c) {
+	if (c === "!") {
+		parser.escapeFunction = null;
+		return doubleRawStringState;
+	}
+
+	if (c !== '"') {
+		throw parser.error("Expected beginning quote of raw string, not " + describeCharacter(c));
+	}
+
+	return stringState;
+}
+
+function doubleRawStringState(parser, c) {
 	if (c !== '"') {
 		throw parser.error("Expected beginning quote of raw string, not " + describeCharacter(c));
 	}
@@ -565,10 +588,10 @@ function stringState(parser, c) {
 		return escapeState;
 	}
 
-	if (parser.stringType !== STRING_TYPE_LINE && parser.escapeFunction) {
-		parser.string.addText(utilities[parser.escapeFunction](c));
-	} else {
+	if (parser.literalEscapeFunction === null) {
 		parser.string.addText(c);
+	} else {
+		parser.string.addText(parser.literalEscapeFunction(c));
 	}
 
 	return stringState;
@@ -1424,6 +1447,7 @@ function parseWithExpectation(template, options, expectError) {
 		stringStart: null,
 		stringType: null,
 		escapeFunction: null,
+		literalEscapeFunction: null,
 		interpolation: null,
 		interpolationStart: null,
 		badInterpolations: null,

@@ -2,6 +2,7 @@
 
 var parser = require("./parser");
 var compiler = require("./compiler");
+var utilities = require("./utilities");
 
 function combine() {
 	var result = {};
@@ -31,5 +32,6 @@ function compile(template, options) {
 	return compiler.compile(tree, options);
 }
 
+exports.Markup = utilities.Markup;
 exports.compile = compile;
 exports.defaults = defaults;

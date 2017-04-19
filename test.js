@@ -27,9 +27,27 @@ var tests = [
 		expected: { output: '<div data-test="<>&amp;&#34;<>&amp;&#34;"></div>' },
 	},
 	{
+		name: "unescaped content",
+		template: '!"<b>test</b>"',
+		expected: { output: "<b>test</b>" },
+	},
+	{
 		name: "unescaped expression",
-		template: '!"#{"unsafe"}"',
-		expected: { output: "unsafe" },
+		template: '!"#{data.unsafe}"',
+		data: {
+			unsafe: razorleaf.Markup.unsafe("<b>unsafe</b>"),
+		},
+		expected: { output: "<b>unsafe</b>" },
+	},
+	{
+		name: "unescaped string expression",
+		template: '!"#{"<b>unsafe</b>"}"',
+		expected: { error: "Unescaped content must be an instance of Markup" },
+	},
+	{
+		name: "force-unescaped string expression",
+		template: '!!"#{"<b>unsafe</b>"}"',
+		expected: { output: "<b>unsafe</b>" },
 	},
 	{
 		name: "escaped double-quotes",
