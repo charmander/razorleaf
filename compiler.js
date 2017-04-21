@@ -308,40 +308,6 @@ var transform = {
 		compileNode(compiler, context, subtree);
 	},
 	if: function (compiler, context, node) {
-		if (node.elif.length) {
-			node.else = {
-				children: [
-					{
-						type: "if",
-						condition: node.elif[0].condition,
-						elif: node.elif.slice(1),
-						else: node.else,
-						children: node.elif[0].children,
-					},
-				],
-			};
-		}
-
-		if (node.condition === "yield") {
-			var macro = node;
-
-			do {
-				macro = macro.parent;
-			} while (macro && macro.type !== "macro");
-
-			if (!macro) {
-				throw node.unexpectedIfYield;
-			}
-
-			if (macro.yieldContent.length) {
-				passThrough(compiler, context, node);
-			} else if (node.else) {
-				passThrough(compiler, context, node.else);
-			}
-
-			return;
-		}
-
 		var condition = wrapExpression(node.condition);
 
 		var newContext = {
@@ -355,6 +321,20 @@ var transform = {
 		node.children.forEach(function (child) {
 			compileNode(compiler, newContext, child);
 		});
+
+		if (node.elif.length) {
+			node.else = {
+				children: [
+					{
+						type: "if",
+						condition: node.elif[0].condition,
+						elif: node.elif.slice(1),
+						else: node.else,
+						children: node.elif[0].children,
+					},
+				],
+			};
+		}
 
 		if (node.else) {
 			elseContext = {
