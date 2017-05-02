@@ -192,6 +192,16 @@ var tests = [
 		expected: { output: '<body class="test-pass"></body>' },
 	},
 	{
+		name: "extended Unicode escape",
+		template: '"\\u{1f60a}"',
+		expected: { output: "😊" },
+	},
+	{
+		name: "invalid extended Unicode escape",
+		template: '"\\u{110000}"',
+		expected: { error: "Undefined Unicode code-point" },
+	},
+	{
 		name: "invalid escape",
 		template: '"\\g"',
 		expected: { error: "Expected escape sequence" },

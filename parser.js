@@ -72,6 +72,19 @@ function isLeadingSurrogate(code) {
 	return code >= 0xd800 && code <= 0xdbff;
 }
 
+function fromCodePoint(codePoint) {
+	if (codePoint < 0x10000) {
+		return String.fromCharCode(codePoint);
+	}
+
+	codePoint -= 0x10000;
+
+	var leadSurrogate = (codePoint >>> 10) + 0xd800;
+	var trailSurrogate = (codePoint & 0x3ff) + 0xdc00;
+
+	return String.fromCharCode(leadSurrogate, trailSurrogate);
+}
+
 function describeCharacter(c) {
 	if (RECOGNIZABLE.test(c)) {
 		return c;
@@ -648,6 +661,10 @@ function escapeX2(parser, c) {
 }
 
 function escapeU1(parser, c) {
+	if (c === "{") {
+		return extendedUnicodeEscapeState;
+	}
+
 	if (c === null || !HEX.test(c)) {
 		throw parser.error("Expected hexadecimal digit");
 	}
@@ -688,6 +705,37 @@ function escapeU4(parser, c) {
 	}
 
 	return stringState;
+}
+
+function extendedUnicodeEscapeState(parser, c) {
+	if (c === "}") {
+		if (!parser.charHex) {
+			throw parser.error("Expected hexadecimal digit");
+		}
+
+		var codePoint = parseInt(parser.charHex, 16);
+
+		if (codePoint > 0x10ffff) {
+			throw parser.error("Undefined Unicode code-point");
+		}
+
+		var escapedCharacter = fromCodePoint(codePoint);
+
+		if (parser.escapeFunction) {
+			parser.string.addText(utilities[parser.escapeFunction](escapedCharacter));
+		} else {
+			parser.string.addText(escapedCharacter);
+		}
+
+		return stringState;
+	}
+
+	if (c === null || !HEX.test(c)) {
+		throw parser.error("Expected hexadecimal digit");
+	}
+
+	parser.charHex += c;
+	return extendedUnicodeEscapeState;
 }
 
 keywords = {
@@ -1413,6 +1461,7 @@ function parseWithExpectation(template, options, expectError) {
 		interpolationStart: null,
 		badInterpolations: null,
 		charCode: null,
+		charHex: "",
 		code: null,
 		macroCallStart: null,
 		macroCallParameter: null,
