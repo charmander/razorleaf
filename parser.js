@@ -33,8 +33,6 @@ var JS_RESERVED_WORDS = new Set([
 	"yield",
 ]);
 
-var optimisticError = Object.create(null);
-
 var singleCharEscapes = Object.assign(
 	Object.create(null),
 	{
@@ -1374,7 +1372,7 @@ keywords = {
 	},
 };
 
-function parseWithExpectation(template, options, expectError) {
+function parse(template, options) {
 	var i;
 
 	var root = {
@@ -1477,11 +1475,6 @@ function parseWithExpectation(template, options, expectError) {
 			};
 		},
 		error: function (message, displayPosition, extent) {
-			if (!expectError) {
-				// Avoid capturing the stack trace unnecessarily
-				return optimisticError;
-			}
-
 			var where = displayPosition || position;
 			var defaultExtent = isLeadingSurrogate(template.charCodeAt(where)) ? 2 : 1;
 
@@ -1492,7 +1485,7 @@ function parseWithExpectation(template, options, expectError) {
 			});
 		},
 		warn: function (message, displayPosition) {
-			if (!options.debug || expectError) {
+			if (!options.debug) {
 				return;
 			}
 
@@ -1662,18 +1655,6 @@ function parseWithExpectation(template, options, expectError) {
 	}
 
 	return root;
-}
-
-function parse(template, options) {
-	try {
-		return parseWithExpectation(template, options, false);
-	} catch (error) {
-		if (error !== optimisticError) {
-			throw error;
-		}
-
-		return parseWithExpectation(template, options, true);
-	}
 }
 
 exports.parse = parse;
