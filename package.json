@@ -1,11 +1,12 @@
 {
 	"name": "razorleaf",
-	"version": "5.0.1",
+	"version": "5.0.2",
 	"files": [
 		"index.js",
 		"compiler.js",
 		"parser.js",
 		"utilities.js",
+		"directory-loader.js",
 		"cli.js"
 	],
 	"bin": "cli.js",
