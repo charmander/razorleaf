@@ -397,6 +397,15 @@ function macroCallBeforeParameterState(parser, c) {
 	}
 
 	if (c === ")") {
+		var endPosition = parser.getPosition();
+
+		parser.context.missing = function (missing) {
+			return parser.error(
+				(missing.length === 1 ? "Missing value for parameter " : "Missing values for parameters ") + missing.join(", "),
+				endPosition
+			);
+		};
+
 		return contentState;
 	}
 
@@ -484,7 +493,7 @@ function macroCallParameterState(parser, c) {
 				parser.macroCallParameter = null;
 				parser.macroCallStart = null;
 				parser.badMacroCallParameters = null;
-				return contentState;
+				return macroCallBeforeParameterState(parser, c);
 			} else {
 				parser.macroCallParameter = "";
 				parser.badMacroCallParameters = [];

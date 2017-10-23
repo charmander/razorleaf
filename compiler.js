@@ -115,7 +115,7 @@ function getScriptIdentifier(templateIdentifier) {
 }
 
 function resolveParameters(macro, node) {
-	var l = macro.parameters.length;
+	var l = Math.min(macro.parameters.length, node.parameters.length);
 	var results = new Array(l);
 	var i;
 	var parameter;
@@ -154,14 +154,14 @@ function resolveParameters(macro, node) {
 
 	var missing = [];
 
-	for (i = 0; i < l; i++) {
+	for (i = 0; i < macro.parameters.length; i++) {
 		if (!results[i]) {
 			missing.push(macro.parameters[i]);
 		}
 	}
 
 	if (missing.length !== 0) {
-		throw new SyntaxError("Missing values for parameters " + missing.join(", "));
+		throw node.missing(missing);
 	}
 
 	return results;
