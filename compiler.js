@@ -608,7 +608,7 @@ function compile(tree, options) {
 		"\n\nreturn " + outputVariable + ";";
 
 	if (options.debug) {
-		console.log(code);
+		console.error(code);
 	}
 
 	var globalUnpack = "";
