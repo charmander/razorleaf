@@ -459,6 +459,8 @@ var transform = {
 						temporaryName = compiler.scope.getName("temporary_" + parameter.name);
 						context.content.addCode(parameter.name + " = " + temporaryName + ";");
 					}
+				} else {
+					compiler.scope.used[parameter.name] = true;
 				}
 
 				pushContext.addCode("var " + parameter.name + " = " + wrapExpression(parameter.value) + ";");

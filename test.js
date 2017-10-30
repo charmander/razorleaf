@@ -254,6 +254,11 @@ var tests = [
 		template: "% var x = 5;\nmacro test(x)\nimg test(12)",
 		expected: { output: "<img>" },
 	},
+	{
+		name: "macro called multiple times in attribute context",
+		template: "macro a(x) \"#{x}\"\nmacro b(y) div a(y)\n\ndiv\n\tb(1)\n\tb(2)",
+		expected: { output: "<div><div>1</div><div>2</div></div>" },
+	},
 ];
 
 function extend(a, b) {
