@@ -20,5 +20,8 @@
 		"email": "~@charmander.me"
 	},
 	"homepage": "https://charmander.me/razorleaf/",
-	"license": "ISC"
+	"license": "ISC",
+	"scripts": {
+		"test": "node test"
+	}
 }

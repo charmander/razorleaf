@@ -1,3 +1,5 @@
+[![Build status][ci image]][ci]
+
 Razor Leaf is an HTML template engine for Node.js.
 
 
@@ -253,3 +255,7 @@ one argument, `data`, which can be used (under that name) in the template.
 - **`debug`**: If `true`, warnings will be printed. (In a later version, this will enable error rewriting.)
 - **`load(name)`**: A function that returns a parsed template represented by `name`. This is filled automatically by most loaders.
 - **`globals`**: An object representing the global variables that should be made available to the template.
+
+
+  [ci]: https://travis-ci.org/charmander/razorleaf
+  [ci image]: https://api.travis-ci.org/charmander/razorleaf.svg
