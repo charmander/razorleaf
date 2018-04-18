@@ -276,7 +276,7 @@ var transform = {
 		context.classes.addText(" " + node.value);
 	},
 	code: function (compiler, context, node) {
-		if (node.children.length) {
+		if (!node.isCodeBlock && node.children.length) {
 			context.content.addCode(wrapExpression(node.code) + " {");
 
 			var newContext = {

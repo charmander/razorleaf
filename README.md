@@ -191,10 +191,10 @@ the rendered HTML.
 
 ### Code
 
-Code blocks begin with `%` and continue to the end of the line.
-Code blocks may contain content (strings, elements, other code blocks,
-and special blocks, but not attributes); if they do, they are treated as blocks
-and wrapped in curly braces.
+**Line code** begins with `%` and continues to the end of the line. Line code may
+contain content (strings, elements, other code blocks, and special blocks, but
+not attributes); if it does, the content is treated as a block and wrapped in
+curly braces.
 
 For example, this template:
 
@@ -218,6 +218,25 @@ function countTo(n) {
 countTo(5);
 ```
 
+**Block code** begins with `do` and treats all of its content as JavaScript.
+
+```
+do
+    const compareKeys = (a, b) =>
+        a.key < b.key ? -1 :
+        a.key > b.key ? 1 :
+        0;
+
+    const sorted = (array, by) =>
+        array
+            .map(value => ({key: by(value), value}))
+            .sort(compareKeys)
+            .map(({value}) => value);
+
+for post in sorted(posts, post => post.title)
+    post-detail(post)
+```
+
 ### Special blocks
 
 Some names define special blocks. These are:
@@ -233,6 +252,7 @@ Some names define special blocks. These are:
 - **`block (name)`**: Defines a replaceable block.
 - **`replace (name)`**: Replaces a block.
 - **`append (name)`**: Appends to a block.
+- **`do`**: See [**Code**](#code).
 
 ## API
 

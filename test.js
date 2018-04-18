@@ -259,6 +259,11 @@ var tests = [
 		template: "macro a(x) \"#{x}\"\nmacro b(y) div a(y)\n\ndiv\n\tb(1)\n\tb(2)",
 		expected: { output: "<div><div>1</div><div>2</div></div>" },
 	},
+	{
+		name: "code blocks",
+		template: "do let r = `0\n\t`\n\tr += `1\n\t\t`\n\tr += 2\n\"#{r}\"",
+		expected: { output: "0\n1\n\t2" },
+	},
 ];
 
 function extend(a, b) {

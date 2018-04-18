@@ -179,7 +179,16 @@ function indentState(parser, c) {
 		}
 
 		if (parser.indent > parser.context.indent + 1) {
-			throw parser.error("Excessive indent " + parser.indent + "; expected " + (parser.context.indent + 1) + (parser.context.indent === -1 ? "" : " or smaller"));
+			if (parser.context.type === "code" && parser.context.isCodeBlock) {
+				var unitsPerLevel =
+					parser.indentType.indentCharacter === "\t" ?
+						1 :
+						parser.indentType.spaces;
+
+				parser.context.code += parser.indentString.substring(unitsPerLevel * (parser.context.indent + 1));
+			} else {
+				throw parser.error("Excessive indent " + parser.indent + "; expected " + (parser.context.indent + 1) + (parser.context.indent === -1 ? "" : " or smaller"));
+			}
 		}
 
 		while (parser.context.indent >= parser.indent) {
@@ -211,6 +220,10 @@ function contentState(parser, c) {
 	if (c === "\n") {
 		parser.indentString = "";
 		return indentState;
+	}
+
+	if (parser.context.type === "code" && parser.context.isCodeBlock) {
+		return codeBlockState(parser, c);
 	}
 
 	if (c === " ") {
@@ -276,6 +289,7 @@ function codeState(parser, c) {
 	if (c === null || c === "\n") {
 		parser.context = {
 			type: "code",
+			isCodeBlock: false,
 			code: parser.code.trim(),
 			parent: parser.context,
 			children: [],
@@ -290,6 +304,18 @@ function codeState(parser, c) {
 
 	parser.code += c;
 	return codeState;
+}
+
+function codeBlockState(parser, c) {
+	if (c === null) {
+		return contentState(parser, c);
+	}
+
+	parser.context.code += c;
+
+	return c === "\n" ?
+		contentState(parser, c) :
+		codeBlockState;
 }
 
 function identifierState(parser, c) {
@@ -1378,6 +1404,22 @@ keywords = {
 		});
 
 		return contentState(parser, c);
+	},
+	do: function (parser, c) {
+		parser.context = {
+			type: "code",
+			isCodeBlock: true,
+			code: "",
+			parent: parser.context,
+			indent: parser.indent,
+			position: parser.identifierStart,
+		};
+
+		parser.context.parent.children.push(parser.context);
+
+		return c === " " || c === "\n" ?
+			contentState :
+			contentState(parser, c);
 	},
 };
 
