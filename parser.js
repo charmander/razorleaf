@@ -179,7 +179,7 @@ function indentState(parser, c) {
 		}
 
 		if (parser.indent > parser.context.indent + 1) {
-			if (parser.context.type === "code" && parser.context.isCodeBlock) {
+			if (parser.context.type === "code") {
 				var unitsPerLevel =
 					parser.indentType.indentCharacter === "\t" ?
 						1 :
@@ -222,7 +222,7 @@ function contentState(parser, c) {
 		return indentState;
 	}
 
-	if (parser.context.type === "code" && parser.context.isCodeBlock) {
+	if (parser.context.type === "code") {
 		return codeBlockState(parser, c);
 	}
 
@@ -263,11 +263,6 @@ function contentState(parser, c) {
 		return commentState;
 	}
 
-	if (c === "%") {
-		parser.code = "";
-		return codeState;
-	}
-
 	if (isIdentifierCharacter(c)) {
 		parser.identifier = "";
 		parser.identifierStart = parser.getPosition();
@@ -283,27 +278,6 @@ function commentState(parser, c) {
 	}
 
 	return commentState;
-}
-
-function codeState(parser, c) {
-	if (c === null || c === "\n") {
-		parser.context = {
-			type: "code",
-			isCodeBlock: false,
-			code: parser.code.trim(),
-			parent: parser.context,
-			children: [],
-			indent: parser.indent,
-			position: parser.getPosition(),
-		};
-
-		parser.context.parent.children.push(parser.context);
-
-		return contentState(parser, c);
-	}
-
-	parser.code += c;
-	return codeState;
 }
 
 function codeBlockState(parser, c) {
@@ -1472,7 +1446,6 @@ keywords = {
 	do: function (parser, c) {
 		parser.context = {
 			type: "code",
-			isCodeBlock: true,
 			code: "",
 			parent: parser.context,
 			indent: parser.indent,

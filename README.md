@@ -205,34 +205,7 @@ the rendered HTML.
 
 ### Code
 
-**Line code** begins with `%` and continues to the end of the line. Line code may
-contain content (strings, elements, other code blocks, and special blocks, but
-not attributes); if it does, the content is treated as a block and wrapped in
-curly braces.
-
-For example, this template:
-
-```
-% function countTo(n)
-    % for (var i = 1; i <= n; i++)
-        "#{i}"
-
-% countTo(5);
-```
-
-might compile to this JavaScript:
-
-```javascript
-function countTo(n) {
-    for (var i = 1; i <= n; i++) {
-        output += i;
-    }
-}
-
-countTo(5);
-```
-
-**Block code** begins with `do` and treats all of its content as JavaScript.
+**Code blocks** begin with `do` and treats all of their content as JavaScript.
 
 ```
 do
@@ -247,8 +220,11 @@ do
             .sort(compareKeys)
             .map(({value}) => value);
 
+    let characterCount = 0;
+
 for post in sorted(posts, post => post.title)
     post-detail(post)
+    do characterCount += post.content.length;
 ```
 
 ### Special blocks

@@ -276,21 +276,7 @@ var transform = {
 		context.classes.addText(" " + node.value);
 	},
 	code: function (compiler, context, node) {
-		if (!node.isCodeBlock && node.children.length) {
-			context.content.addCode(wrapExpression(node.code) + " {");
-
-			var newContext = {
-				content: context.content,
-			};
-
-			node.children.forEach(function (child) {
-				compileNode(compiler, newContext, child);
-			});
-
-			context.content.addCode("}");
-		} else {
-			context.content.addCode(wrapExpression(node.code) + ";");
-		}
+		context.content.addCode(wrapExpression(node.code) + ";");
 
 		addPossibleConflicts(compiler.possibleConflicts, node.code);
 	},

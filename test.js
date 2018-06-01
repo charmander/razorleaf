@@ -67,12 +67,12 @@ var tests = [
 	},
 	{
 		name: "non-conflicting output variable",
-		template: '% var output;\n"#{typeof output}"',
+		template: 'do var output;\n"#{typeof output}"',
 		expected: { output: "undefined" },
 	},
 	{
 		name: "non-conflicting output variable with escaped references",
-		template: '% var \\u006futput;\n"#{typeof \\u006futput}"',
+		template: 'do var \\u006futput;\n"#{typeof \\u006futput}"',
 		expected: { output: "undefined" },
 	},
 	{
@@ -91,7 +91,7 @@ var tests = [
 	},
 	{
 		name: "reordering of mixed conditionals",
-		template: '% var x = true;\ndiv "Hello, world!" \n\tif x\n\t\t"#{data.example}"\n\tif x = false\n\t\tdata-fail: "true"',
+		template: 'do var x = true;\ndiv "Hello, world!" \n\tif x\n\t\t"#{data.example}"\n\tif x = false\n\t\tdata-fail: "true"',
 		data: { example: "example" },
 		expected: { output: "<div>Hello, world!example</div>" },
 	},
@@ -173,7 +173,7 @@ var tests = [
 	},
 	{
 		name: "hasOwnProperty as a variable name",
-		template: '% var hasOwnProperty;\nfor x of [1, 2, 3]\n\t"#{x}"',
+		template: 'do var hasOwnProperty;\nfor x of [1, 2, 3]\n\t"#{x}"',
 		expected: { output: "123" },
 	},
 	{
@@ -232,7 +232,7 @@ var tests = [
 	},
 	{
 		name: "macros with conflicting variable names",
-		template: '% var x = 5;\nmacro test(x)\n\t"#{x},"\ntest(12)\n"#{x}"',
+		template: 'do var x = 5;\nmacro test(x)\n\t"#{x},"\ntest(12)\n"#{x}"',
 		expected: { output: "12,5" },
 	},
 	{
@@ -252,7 +252,7 @@ var tests = [
 	},
 	{
 		name: "macro with conflicting variable name in void element context",
-		template: "% var x = 5;\nmacro test(x)\nimg test(12)",
+		template: "do var x = 5;\nmacro test(x)\nimg test(12)",
 		expected: { output: "<img>" },
 	},
 	{
@@ -267,7 +267,7 @@ var tests = [
 	},
 	{
 		name: "code blocks with first indentation in template",
-		template: "% let x;\ndo\n\tif (true)\n\t\tx = 5;\n\n\"#{x}\"",
+		template: "do let x;\ndo\n\tif (true)\n\t\tx = 5;\n\n\"#{x}\"",
 		expected: { output: "5" },
 	},
 	{
