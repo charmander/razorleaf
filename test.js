@@ -264,6 +264,11 @@ var tests = [
 		template: "do let r = `0\n\t`\n\tr += `1\n\t\t`\n\tr += 2\n\"#{r}\"",
 		expected: { output: "0\n1\n\t2" },
 	},
+	{
+		name: "code blocks with first indentation in template",
+		template: "% let x;\ndo\n\tif (true)\n\t\tx = 5;\n\n\"#{x}\"",
+		expected: { output: "5" },
+	},
 ];
 
 function extend(a, b) {

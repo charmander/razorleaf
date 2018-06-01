@@ -1417,9 +1417,7 @@ keywords = {
 
 		parser.context.parent.children.push(parser.context);
 
-		return c === " " || c === "\n" ?
-			contentState :
-			contentState(parser, c);
+		return contentState(parser, c);
 	},
 };
 
