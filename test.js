@@ -269,6 +269,11 @@ var tests = [
 		template: "% let x;\ndo\n\tif (true)\n\t\tx = 5;\n\n\"#{x}\"",
 		expected: { output: "5" },
 	},
+	{
+		name: "boolean attributes",
+		template: "input disabled: \"\"",
+		expected: { output: "<input disabled>" },
+	},
 ];
 
 function extend(a, b) {

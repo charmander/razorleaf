@@ -239,7 +239,7 @@ var transform = {
 
 		context.attributes.addText(" " + node.name);
 
-		if (node.value) {
+		if (node.value !== null && node.value.value.parts.length !== 0) {
 			context.attributes.addText("=\"");
 			context.attributes.addBlock(node.value.value);
 			context.attributes.addText("\"");
