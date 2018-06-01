@@ -285,6 +285,17 @@ var tests = [
 		template: 'html\n\tlang:\n\t"fr"',
 		expected: { error: "Expected attribute value or “if”" },
 	},
+	{
+		name: "content `if` blocks after code",
+		template: 'div\n\tdo const x = 5;\n\tif x === 5\n\t\t"pass"',
+		expected: { output: "<div>pass</div>" },
+	},
+	{
+		name: "attribute `if` blocks after code",
+		template: 'div\n\tdo const x = 5;\n\tif x === 5\n\t\tdata-pass: ""',
+		expected: { output: "<div data-pass></div>" },
+		options: { debug: true },
+	},
 ];
 
 function extend(a, b) {
