@@ -5,7 +5,7 @@ var fs = require("fs");
 var vm = require("vm");
 
 var razorleaf = require("./");
-var DirectoryLoader = require("./directory-loader").DirectoryLoader;
+var DirectoryLoader = require("./directory-loader");
 
 function showUsage() {
 	console.error("Usage: razorleaf [-d|--data <expression>] [<template file>]");

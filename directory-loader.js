@@ -2,6 +2,7 @@
 
 var fs = require("fs");
 var path = require("path");
+var util = require("util");
 
 var parser = require("./parser");
 var razorleaf = require("./");
@@ -43,4 +44,15 @@ DirectoryLoader.prototype.load = function (name) {
 	return razorleaf.compile(this.read(name), combine(this.options, { name: name }));
 };
 
-exports.DirectoryLoader = DirectoryLoader;
+Object.defineProperty(DirectoryLoader, "DirectoryLoader", {
+	configurable: true,
+	get: util.deprecate(function () {
+		return DirectoryLoader;
+	}, "DirectoryLoader is now a direct export; const DirectoryLoader = require('razorleaf/directory-loader')"),
+	set: function (value) {
+		delete this.DirectoryLoader;
+		this.DirectoryLoader = value;
+	},
+});
+
+module.exports = DirectoryLoader;
