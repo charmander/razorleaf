@@ -1,7 +1,9 @@
 "use strict";
 
-var utilities = require("./utilities");
-var CodeBlock = utilities.CodeBlock;
+var CodeBlock = require("./internal/code-block");
+var voidTags = require("./internal/void-tags");
+var escapes = require("./escapes");
+var Markup = require("./markup");
 
 var POSSIBLE_COMMENT = /\/\/|<!--/;
 
@@ -71,8 +73,6 @@ var RESERVED_WORDS = [
 	"arguments",
 	"eval",
 ];
-
-var voidTags = utilities.voidTags;
 
 function parseIdentifierEscape(match, identifierEscape) {
 	return String.fromCharCode(parseInt(identifierEscape, 16));
@@ -629,14 +629,14 @@ function compile(tree, options) {
 	}
 
 	return new Function(
-		"escapeAttributeValue, escapeContent, unwrapMarkup, globals",
+		"escapeDoubleQuotedAttributeValue, escapeContent, unwrapMarkup, globals",
 		"'use strict';\n" +
 		globalUnpack +
 		"return function template(data) {\n" + code + "\n};"
 	)(
-		utilities.escapeAttributeValue,
-		utilities.escapeContent,
-		utilities.unwrapMarkup,
+		escapes.escapeDoubleQuotedAttributeValue,
+		escapes.escapeContent,
+		Markup.unwrap,
 		options.globals
 	);
 }

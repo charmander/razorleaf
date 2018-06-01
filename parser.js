@@ -1,8 +1,8 @@
 /* eslint-disable no-shadow */
 "use strict";
 
-var utilities = require("./utilities");
-var CodeBlock = utilities.CodeBlock;
+var CodeBlock = require("./internal/code-block");
+var escapes = require("./escapes");
 var push = Array.prototype.push;
 
 var HEX = /[\da-fA-F]/;
@@ -248,11 +248,11 @@ function contentState(parser, c) {
 		parser.string = new CodeBlock();
 
 		if (parser.context.type === "attribute") {
-			parser.escapeFunction = "escapeAttributeValue";
-			parser.literalEscapeFunction = utilities.escapeAttributeValue;
+			parser.escapeFunction = "escapeDoubleQuotedAttributeValue";
+			parser.literalEscapeFunction = escapes.escapeDoubleQuotedAttributeValue;
 		} else {
 			parser.escapeFunction = "escapeContent";
-			parser.literalEscapeFunction = utilities.escapeContent;
+			parser.literalEscapeFunction = escapes.escapeContent;
 		}
 
 		parser.stringStart = parser.getPosition();
@@ -749,7 +749,7 @@ function escapeX2(parser, c) {
 	var escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
 
 	if (parser.escapeFunction) {
-		parser.string.addText(utilities[parser.escapeFunction](escapedCharacter));
+		parser.string.addText(parser.literalEscapeFunction(escapedCharacter));
 	} else {
 		parser.string.addText(escapedCharacter);
 	}
@@ -796,7 +796,7 @@ function escapeU4(parser, c) {
 	var escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
 
 	if (parser.escapeFunction) {
-		parser.string.addText(utilities[parser.escapeFunction](escapedCharacter));
+		parser.string.addText(parser.literalEscapeFunction(escapedCharacter));
 	} else {
 		parser.string.addText(escapedCharacter);
 	}
@@ -819,7 +819,7 @@ function extendedUnicodeEscapeState(parser, c) {
 		var escapedCharacter = fromCodePoint(codePoint);
 
 		if (parser.escapeFunction) {
-			parser.string.addText(utilities[parser.escapeFunction](escapedCharacter));
+			parser.string.addText(parser.literalEscapeFunction(escapedCharacter));
 		} else {
 			parser.string.addText(escapedCharacter);
 		}

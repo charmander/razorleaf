@@ -1,6 +1,7 @@
 "use strict";
 
 var razorleaf = require("./");
+var Markup = require("./markup");
 var parser = require("./parser");
 
 var PARSER_ERROR_MESSAGE = /^(.+) at line \d+, character \d+ in <Razor Leaf template>/;
@@ -35,7 +36,7 @@ var tests = [
 		name: "unescaped expression",
 		template: '!"#{data.unsafe}"',
 		data: {
-			unsafe: razorleaf.Markup.unsafe("<b>unsafe</b>"),
+			unsafe: Markup.unsafe("<b>unsafe</b>"),
 		},
 		expected: { output: "<b>unsafe</b>" },
 	},
