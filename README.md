@@ -127,11 +127,7 @@ sections will not be escaped.
 
 ### Attributes
 
-Attributes are marked up using the syntax <code><i>name</i>:</code>.
-An attribute name can, optionally, be followed by a string to be used as
-its value; if a value isn’t provided, the attribute is assumed to be boolean
-(and present). Note that a string used as an attribute’s value cannot be “raw”
-— that is, cannot be preceded by an exclamation mark.
+Attributes are marked up using the syntax <code><i>name</i>: "<i>value</i>"</code>, where <code>"<i>value</i>"</code> is a string as described above. Use an empty string for boolean attributes.
 
 ```
 meta charset: "utf-8"
@@ -139,6 +135,24 @@ meta charset: "utf-8"
 
 ```html
 <meta charset="utf-8">
+```
+
+If a boolean attribute is conditional, it can be written in shorthand:
+
+```
+input
+    name: "#{field.name}"
+    disabled: if field.disabled
+```
+
+equivalent to:
+
+```
+input
+    name: "#{field.name}"
+
+    if field.disabled
+        disabled: ""
 ```
 
 ### Classes

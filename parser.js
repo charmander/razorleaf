@@ -392,9 +392,73 @@ function possibleAttributeState(parser, c) {
 		position: parser.getPosition(),
 	};
 
-	parser.context.parent.children.push(parser.context);
+	return afterAttributeNameState(parser, c);
+}
 
-	return contentState(parser, c);
+function afterAttributeNameState(parser, c) {
+	if (c === " ") {
+		return afterAttributeNameState;
+	}
+
+	if (c === "\"") {
+		parser.context.parent.children.push(parser.context);
+
+		return contentState(parser, c);
+	}
+
+	if (c === "i") {
+		parser.identifierStart = parser.getPosition();
+
+		return attributeIf0State;
+	}
+
+	throw parser.error("Expected attribute value or “if”");
+}
+
+function attributeIf0State(parser, c) {
+	if (c === "f") {
+		return attributeIf1State;
+	}
+
+	throw parser.error("Expected attribute value or “if”", parser.identifierStart);
+}
+
+function attributeIf1State(parser, c) {
+	if (c === " ") {
+		parser.context = {
+			type: "if",
+			condition: "",
+			elif: [],
+			else: null,
+			parent: parser.context.parent,
+			children: [parser.context],
+			indent: parser.indent,
+			position: parser.getPosition(),
+		};
+
+		parser.context.parent.children.push(parser.context);
+
+		return attributeConditionSpaceState;
+	}
+
+	throw parser.error("Expected attribute value or “if”", parser.identifierStart);
+}
+
+function attributeConditionSpaceState(parser, c) {
+	if (c === " ") {
+		return attributeConditionSpaceState;
+	}
+
+	return attributeConditionState(parser, c);
+}
+
+function attributeConditionState(parser, c) {
+	if (c === null || c === "\n") {
+		return contentState(parser, c);
+	}
+
+	parser.context.condition += c;
+	return attributeConditionState;
 }
 
 function macroCallState(parser, c) {

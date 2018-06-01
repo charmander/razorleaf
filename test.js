@@ -61,7 +61,7 @@ var tests = [
 	},
 	{
 		name: "comment after boolean attribute",
-		template: "div\n\tdata-test:\n\t# comment",
+		template: "div\n\tdata-test: \"\"\n\t# comment",
 		expected: { output: "<div data-test></div>" },
 	},
 	{
@@ -78,7 +78,7 @@ var tests = [
 		name: "including attributes",
 		template: "script include async",
 		include: {
-			async: "async:",
+			async: 'async: ""',
 		},
 		expected: { output: "<script async></script>" },
 	},
@@ -96,7 +96,7 @@ var tests = [
 	},
 	{
 		name: "nested conditionals",
-		template: 'div if true\n\tif 1\n\t\t"Good" data-example:',
+		template: 'div if true\n\tif 1\n\t\t"Good" data-example: ""',
 		expected: { output: "<div data-example>Good</div>" },
 	},
 	{
@@ -273,6 +273,16 @@ var tests = [
 		name: "boolean attributes",
 		template: "input disabled: \"\"",
 		expected: { output: "<input disabled>" },
+	},
+	{
+		name: "conditional boolean attribute shorthand",
+		template: "button disabled: if true\nbutton disabled: if false",
+		expected: { output: "<button disabled></button><button></button>" },
+	},
+	{
+		name: "attribute split across multiple lines incorrectly",
+		template: 'html\n\tlang:\n\t"fr"',
+		expected: { error: "Expected attribute value or “if”" },
 	},
 ];
 
