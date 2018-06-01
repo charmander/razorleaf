@@ -54,8 +54,8 @@ function firstIndex(a, b) {
 	);
 }
 
-function main() {
-	var args = process.argv.slice(2);
+function mainWithOptions(options, args) {
+	args = args.slice();
 
 	if (args[0] === "-h" || args[0] === "--help") {
 		showUsage();
@@ -95,7 +95,7 @@ function main() {
 			throw error;
 		}
 
-		var loader = new DirectoryLoader(".");
+		var loader = new DirectoryLoader(".", options);
 		var template = razorleaf.compile(templateSource, loader.options);
 		process.stdout.write(template(data));
 	}
@@ -107,4 +107,15 @@ function main() {
 	}
 }
 
-main();
+function main(args) {
+	mainWithOptions(undefined, args);
+}
+
+module.exports = {
+	main: main,
+	mainWithOptions: mainWithOptions,
+};
+
+if (module === require.main) {
+	main(process.argv.slice(2));
+}
