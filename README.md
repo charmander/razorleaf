@@ -278,4 +278,4 @@ one argument, `data`, which can be used (under that name) in the template.
 
 
   [ci]: https://travis-ci.org/charmander/razorleaf
-  [ci image]: https://api.travis-ci.org/charmander/razorleaf.svg
+  [ci image]: https://api.travis-ci.org/charmander/razorleaf.svg?branch=master
