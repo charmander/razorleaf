@@ -635,11 +635,7 @@ function stringState(parser, c) {
 		return escapeState;
 	}
 
-	if (parser.literalEscapeFunction === null) {
-		parser.string.addText(c);
-	} else {
-		parser.string.addText(parser.literalEscapeFunction(c));
-	}
+	parser.string.addText(parser.literalEscapeFunction, c);
 
 	return stringState;
 }
@@ -652,7 +648,7 @@ function stringPoundState(parser, c) {
 		return interpolationState;
 	}
 
-	parser.string.addText("#");
+	parser.string.addText(parser.literalEscapeFunction, "#");
 	return stringState(parser, c);
 }
 
@@ -686,7 +682,7 @@ function interpolationState(parser, c) {
 
 function escapeState(parser, c) {
 	if (c === "#" || c === '"') {
-		parser.string.addText(c);
+		parser.string.addText(parser.literalEscapeFunction, c);
 		return stringState;
 	}
 
@@ -699,7 +695,7 @@ function escapeState(parser, c) {
 	}
 
 	if (c in singleCharEscapes) {
-		parser.string.addText(singleCharEscapes[c]);
+		parser.string.addText(parser.literalEscapeFunction, singleCharEscapes[c]);
 		return stringState;
 	}
 
@@ -722,11 +718,7 @@ function escapeX2(parser, c) {
 
 	var escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
 
-	if (parser.escapeFunction) {
-		parser.string.addText(parser.literalEscapeFunction(escapedCharacter));
-	} else {
-		parser.string.addText(escapedCharacter);
-	}
+	parser.string.addText(parser.literalEscapeFunction, escapedCharacter);
 
 	return stringState;
 }
@@ -769,11 +761,7 @@ function escapeU4(parser, c) {
 
 	var escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
 
-	if (parser.escapeFunction) {
-		parser.string.addText(parser.literalEscapeFunction(escapedCharacter));
-	} else {
-		parser.string.addText(escapedCharacter);
-	}
+	parser.string.addText(parser.literalEscapeFunction, escapedCharacter);
 
 	return stringState;
 }
@@ -792,11 +780,7 @@ function extendedUnicodeEscapeState(parser, c) {
 
 		var escapedCharacter = fromCodePoint(codePoint);
 
-		if (parser.escapeFunction) {
-			parser.string.addText(parser.literalEscapeFunction(escapedCharacter));
-		} else {
-			parser.string.addText(escapedCharacter);
-		}
+		parser.string.addText(parser.literalEscapeFunction, escapedCharacter);
 
 		return stringState;
 	}
@@ -813,7 +797,7 @@ keywords = {
 	doctype: function (parser, c) {
 		parser.context.children.push({
 			type: "string",
-			value: new CodeBlock().addText("<!DOCTYPE html>"),
+			value: new CodeBlock().addText(null, "<!DOCTYPE html>"),
 			parent: parser.context,
 			position: parser.getPosition(),
 		});

@@ -14,19 +14,20 @@ function CodeBlock() {
 	this.parts = [];
 }
 
-CodeBlock.prototype.addText = function (text) {
+CodeBlock.prototype.addText = function (escapeFunction, text) {
 	this.parts.push({
 		type: "text",
+		escapeFunction: escapeFunction,
 		value: text,
 	});
 
 	return this;
 };
 
-CodeBlock.prototype.addExpression = function (escapeFunction, expression) {
+CodeBlock.prototype.addExpression = function (escapeFunctionName, expression) {
 	this.parts.push({
 		type: "expression",
-		escapeFunction: escapeFunction,
+		escapeFunctionName: escapeFunctionName,
 		value: expression,
 	});
 
@@ -63,7 +64,12 @@ CodeBlock.prototype.toCode = function (outputVariable, initialState) {
 				code += " + '";
 			}
 
-			code += escapeLiteral(part.value);
+			var escaped =
+				part.escapeFunction === null ?
+					part.value :
+					part.escapeFunction(part.value);
+
+			code += escapeLiteral(escaped);
 			currentType = "text";
 			break;
 
@@ -76,8 +82,8 @@ CodeBlock.prototype.toCode = function (outputVariable, initialState) {
 				code += "' + ";
 			}
 
-			if (part.escapeFunction) {
-				code += part.escapeFunction + "((" + part.value + "))";
+			if (part.escapeFunctionName !== null) {
+				code += part.escapeFunctionName + "((" + part.value + "))";
 			} else {
 				code += "(" + part.value + ")";
 			}
@@ -108,6 +114,26 @@ CodeBlock.prototype.toCode = function (outputVariable, initialState) {
 	}
 
 	return code;
+};
+
+CodeBlock.prototype.toTextOrNull = function (expectedEscapeFunction) {
+	var text = "";
+
+	for (var i = 0; i < this.parts.length; i++) {
+		var part = this.parts[i];
+
+		if (part.type !== "text") {
+			return null;
+		}
+
+		if (part.escapeFunction !== expectedEscapeFunction) {
+			throw new Error("Unexpected");
+		}
+
+		text += part.value;
+	}
+
+	return text;
 };
 
 module.exports = CodeBlock;

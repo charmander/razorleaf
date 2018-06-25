@@ -149,7 +149,7 @@ var tests = [
 	{
 		name: "attributes in else after content in if",
 		template: 'div\n\tif false\n\t\t"fail"\n\telse\n\t\tdata-status: "pass"',
-		expected: { output: '<div data-status="pass"></div>' },
+		expected: { output: "<div data-status=pass></div>" },
 	},
 	{
 		name: "elif inside element",
@@ -190,7 +190,7 @@ var tests = [
 		include: {
 			layout: "body\n\tblock content\n\t\t.test-fail",
 		},
-		expected: { output: '<body class="test-pass"></body>' },
+		expected: { output: "<body class=test-pass></body>" },
 	},
 	{
 		name: "extended Unicode escape",
