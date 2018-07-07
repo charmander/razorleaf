@@ -261,7 +261,7 @@ Some names define special blocks. These are:
 Creates a loader that maps template names to files with the `.rl` extension
 in the directory located at *`root`*.
 
-#### `razorleaf.DirectoryLoader.prototype.load(name)`
+#### `razorleaf.DirectoryLoader.prototype.load(name, [options])`
 
 Returns a template object loaded from the root directory.
 

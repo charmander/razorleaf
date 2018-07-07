@@ -40,8 +40,22 @@ DirectoryLoader.prototype.read = function (name) {
 	return fs.readFileSync(path.join(this.root, name + ".rl"), "utf-8");
 };
 
-DirectoryLoader.prototype.load = function (name) {
-	return razorleaf.compile(this.read(name), combine(this.options, { name: name }));
+DirectoryLoader.prototype.load = function (name, loadOptions) {
+	var options = Object.assign({}, this.options, { name: name });
+
+	if (loadOptions) {
+		if ("globals" in loadOptions) {
+			options.globals = Object.assign({}, options.globals, loadOptions.globals);
+		}
+
+		for (var option in loadOptions) {
+			if (option !== "globals") {
+				options[option] = loadOptions[option];
+			}
+		}
+	}
+
+	return razorleaf.compile(this.read(name), options);
 };
 
 Object.defineProperty(DirectoryLoader, "DirectoryLoader", {
