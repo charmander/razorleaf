@@ -1,7 +1,5 @@
 "use strict";
 
-var util = require("util");
-
 var voidTags = [
 	"area", "base", "br", "col", "command", "embed", "hr", "img", "input",
 	"keygen", "link", "meta", "param", "source", "track", "wbr",
@@ -19,15 +17,9 @@ function Markup(parts) {
 	return Markup.unsafe(parts[0]);
 }
 
-// Node 4 doesn’t support process.emitWarning
-var unsafeNonString = util.deprecate(
-	function () {},
-	"Passing a non-string value to Markup.unsafe will throw in razorleaf@6"
-);
-
 Markup.unsafe = function (html) {
 	if (typeof html !== "string") {
-		unsafeNonString();
+		throw new TypeError("HTML passed to Markup.unsafe must be a string");
 	}
 
 	return Object.create(Markup.prototype, {
