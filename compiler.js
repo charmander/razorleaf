@@ -606,17 +606,17 @@ function compileNode(compiler, context, node) {
 	transformer(compiler, context, node);
 }
 
-function compile(tree, options) {
-	var scope = new Scope();
+const compile = (tree, options) => {
+	const scope = new Scope();
 
-	var context = {
+	const context = {
 		content: new CodeBlock(),
 		attributesMacroFunctions: new Map(),
 		contentOnlyMacroFunctions: new Map(),
 		macroDefinitions: [],
 	};
 
-	var compiler = {
+	const compiler = {
 		scope: scope,
 		possibleConflicts: scope.used,
 		options: options,
@@ -627,40 +627,28 @@ function compile(tree, options) {
 
 	compileNode(compiler, context, tree);
 
-	var outputVariable = scope.getName("output");
+	const outputVariable = scope.getName("output");
 
-	var code =
+	const code =
 		context.macroDefinitions.join("") +
-		"var " + outputVariable + " = '" + context.content.toCode(outputVariable, "text") +
+		"let " + outputVariable + " = '" + context.content.toCode(outputVariable, "text") +
 		"\n\nreturn " + outputVariable + ";";
 
-	var globalUnpack = "";
-
-	if (options.globals !== undefined) {
-		globalUnpack =
-			Object.keys(options.globals)
-				.map(function (name) {
-					if (!isIdentifier(name)) {
-						throw new Error("Template global “" + name + "” is not a valid identifier");
-					}
-
-					return "var " + name + " = globals." + name + ";\n";
-				})
-				.join("");
-	}
+	const globals = Object.assign({}, options.globals, {
+		escapeDoubleQuotedAttributeValue: escapes.escapeDoubleQuotedAttributeValue,
+		escapeContent: escapes.escapeContent,
+		unwrapMarkup: Markup.unwrap,
+	});
 
 	return new Function(
-		"escapeDoubleQuotedAttributeValue, escapeContent, unwrapMarkup, globals",
+		"__globals",
 		"'use strict';\n" +
-		globalUnpack +
-		"return function template(data) {\n" + code + "\n};"
-	)(
-		escapes.escapeDoubleQuotedAttributeValue,
-		escapes.escapeContent,
-		Markup.unwrap,
-		options.globals
-	);
-}
+		"const {" + Object.keys(globals).join(", ") + "} = __globals;\n" +
+		"return data => {\n" + code + "\n};"
+	)(globals);
+};
 
-exports.compile = compile;
-exports.transform = transform;
+module.exports = {
+	compile,
+	transform,
+};
