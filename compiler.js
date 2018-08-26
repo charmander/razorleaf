@@ -424,40 +424,36 @@ var transform = {
 			}
 		}
 	},
-	for: function (compiler, context, node) {
-		var newContext = {
+	for: (compiler, context, node) => {
+		const newContext = {
 			content: context.content,
 		};
 
-		var originalName = null;
-		var index = node.indexName || compiler.scope.getName("i");
-		var collectionName = compiler.scope.getName("collection");
-		var collection = wrapExpression(node.collection);
+		const collection = wrapExpression(node.collection);
 
-		context.content.addCode("var " + collectionName + " = (" + collection + ");");
+		let indexNameUsed;
 
-		if (node.indexName) {
-			if (node.indexName in compiler.scope.used) {
-				originalName = compiler.scope.getName("original");
-
-				context.content.addCode("var " + originalName + " = " + node.indexName + ";");
-			} else {
-				compiler.scope.used[node.indexName] = true;
-			}
+		if (node.indexName !== null) {
+			context.content.addCode("{ let " + node.indexName + " = 0;");
+			indexNameUsed = compiler.scope.used[node.indexName];
+			compiler.scope.used[node.indexName] = true;
 		}
 
-		context.content.addCode("for (var " + index + " = 0; " + index + " < " + collectionName + ".length; " + index + "++) {");
-		context.content.addCode("var " + node.variable + " = " + collectionName + "[" + index + "];");
+		context.content.addCode("for (const " + node.variable + " of (" + collection + ")) {");
 
-		node.children.forEach(function (child) {
+		node.children.forEach(child => {
 			compileNode(compiler, newContext, child);
 		});
 
-		context.content.addCode("}");
+		if (node.indexName !== null) {
+			context.content.addCode(node.indexName + "++; }");
 
-		if (originalName) {
-			context.content.addCode(node.indexName + " = " + originalName + ";");
+			if (!indexNameUsed) {
+				delete compiler.scope.used[node.indexName];
+			}
 		}
+
+		context.content.addCode("}");
 	},
 	call: function (compiler, context, node) {
 		if (!(node.name in compiler.tree.macros)) {

@@ -114,6 +114,11 @@ var tests = [
 		expected: { output: "149" },
 	},
 	{
+		name: "loop over non-array iterable",
+		template: 'for x of new Set([2, 2, 3])\n\t"#{x}"',
+		expected: { output: "23" },
+	},
+	{
 		name: "non-conflicting variable in loop with index",
 		template: 'for x, i of [1, 2, 3]\n\tfor y of [4, 5, 6]\n\t\t"#{i}"',
 		expected: { output: "000111222" },
