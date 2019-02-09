@@ -13,7 +13,7 @@ Razor Leaf is an HTML template engine for Node.js.
 
 - conditional attributes and classes
 
-- no extraneous rendered whitespace
+- explicit whitespace only to make it clear when it affects the content
 
 - no dependencies\*
 
