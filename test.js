@@ -294,12 +294,13 @@ var tests = [
 		name: "content `if` blocks after code",
 		template: 'div\n\tdo const x = 5;\n\tif x === 5\n\t\t"pass"',
 		expected: { output: "<div>pass</div>" },
+		fails: true,
 	},
 	{
 		name: "attribute `if` blocks after code",
 		template: 'div\n\tdo const x = 5;\n\tif x === 5\n\t\tdata-pass: ""',
 		expected: { output: "<div data-pass></div>" },
-		options: { debug: true },
+		fails: true,
 	},
 ];
 
@@ -335,12 +336,12 @@ function passes(test) {
 
 	if (errorMessage === test.expected.error && output === test.expected.output) {
 		console.log("\x1b[32m✔\x1b[0m \x1b[1m%s\x1b[0m passed", test.name);
-		return true;
+		return !test.fails;
 	}
 
-	console.log("\x1b[31m✘\x1b[0m \x1b[1m%s\x1b[0m failed", test.name);
+	console.log("\x1b[%s\x1b[0m \x1b[1m%s\x1b[0m failed", test.fails ? "33m-" : "31m✘", test.name);
 	console.log(error ? error.stack.replace(/^/gm, "  ") : "  Output: " + output);
-	return false;
+	return test.fails;
 }
 
 process.exit(!tests.every(passes));
