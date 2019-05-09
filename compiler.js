@@ -640,10 +640,18 @@ const compile = (tree, options) => {
 		unwrapMarkup: Markup.unwrap,
 	});
 
+	const globalNames = Object.keys(globals);
+
+	for (const name of globalNames) {
+		if (!isIdentifier(name)) {
+			throw new Error(`Template global “${name}” is not a valid identifier`);
+		}
+	}
+
 	return new Function(
 		"__globals",
 		"'use strict';\n" +
-		"const {" + Object.keys(globals).join(", ") + "} = __globals;\n" +
+		"const {" + globalNames.join(", ") + "} = __globals;\n" +
 		"return data => {\n" + code + "\n};"
 	)(globals);
 };
