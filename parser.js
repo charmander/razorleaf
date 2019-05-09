@@ -1456,12 +1456,6 @@ function parse(template, options) {
 		index: 0,
 	};
 
-	function describePosition(displayPosition) {
-		return displayPosition.index === template.length ?
-			"EOF" :
-			"line " + displayPosition.line + ", character " + displayPosition.character;
-	}
-
 	function TemplateError(message, source) {
 		Object.defineProperty(this, "message", {
 			configurable: true,

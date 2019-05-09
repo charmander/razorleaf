@@ -1,7 +1,7 @@
 ---
 root: true
 parserOptions:
-  ecmaVersion: 5
+  ecmaVersion: 2015
 env:
   node: true
   es6: true
@@ -52,7 +52,10 @@ rules:
   comma-spacing: 2
   comma-style: 2
   eol-last: 2
-  indent: [2, tab]
+  indent:
+    - 2
+    - tab
+    - flatTernaryExpressions: true
   key-spacing: 2
   keyword-spacing: 2
   linebreak-style: [2, unix]
