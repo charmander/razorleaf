@@ -1,13 +1,13 @@
 "use strict";
 
-function escapeDoubleQuotedAttributeValue(value) {
-	var value_ = "" + value;
-	var result = "";
-	var start = 0;
+const escapeDoubleQuotedAttributeValue = value => {
+	const value_ = "" + value;
+	let result = "";
+	let start = 0;
 
-	for (var i = 0; i < value_.length; i++) {
-		var c = value_.charCodeAt(i);
-		var escaped;
+	for (let i = 0; i < value_.length; i++) {
+		const c = value_.charCodeAt(i);
+		let escaped;
 
 		if (c === 38) {
 			escaped = "&amp;";
@@ -26,16 +26,16 @@ function escapeDoubleQuotedAttributeValue(value) {
 	}
 
 	return result + value_.substring(start);
-}
+};
 
-function escapeContent(value) {
-	var value_ = "" + value;
-	var result = "";
-	var start = 0;
+const escapeContent = value => {
+	const value_ = "" + value;
+	let result = "";
+	let start = 0;
 
-	for (var i = 0; i < value_.length; i++) {
-		var c = value_.charCodeAt(i);
-		var escaped;
+	for (let i = 0; i < value_.length; i++) {
+		const c = value_.charCodeAt(i);
+		let escaped;
 
 		if (c === 38) {
 			escaped = "&amp;";
@@ -54,9 +54,9 @@ function escapeContent(value) {
 	}
 
 	return result + value_.substring(start);
-}
+};
 
 module.exports = {
-	escapeDoubleQuotedAttributeValue: escapeDoubleQuotedAttributeValue,
-	escapeContent: escapeContent,
+	escapeDoubleQuotedAttributeValue,
+	escapeContent,
 };

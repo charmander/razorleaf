@@ -1,18 +1,18 @@
 "use strict";
 
-var CodeBlock = require("./internal/code-block");
-var voidTags = require("./internal/void-tags");
-var escapes = require("./escapes");
-var Markup = require("./markup");
+const CodeBlock = require("./internal/code-block");
+const voidTags = require("./internal/void-tags");
+const escapes = require("./escapes");
+const Markup = require("./markup");
 
-var POSSIBLE_COMMENT = /\/\/|<!--/;
+const POSSIBLE_COMMENT = /\/\/|<!--/;
 
-var IDENTIFIER_ESCAPE = /\\u([\dA-Fa-f]{4})/g;
+const IDENTIFIER_ESCAPE = /\\u([\dA-Fa-f]{4})/g;
 
 // Simplified because ES6 uses the ID_Start and ID_Continue Unicode properties
-var SIMPLE_IDENTIFIER = /^[a-zA-Z_$][\w_$]*$/;
+const SIMPLE_IDENTIFIER = /^[a-zA-Z_$][\w_$]*$/;
 
-var RESERVED_WORDS = [
+const RESERVED_WORDS = new Set([
 	// Keyword
 	"break",
 	"case",
@@ -72,37 +72,35 @@ var RESERVED_WORDS = [
 	// Additional forbidden `BindingIdentifier`s in strict mode
 	"arguments",
 	"eval",
-];
+]);
 
-function parseIdentifierEscape(match, identifierEscape) {
-	return String.fromCharCode(parseInt(identifierEscape, 16));
-}
+const parseIdentifierEscape = (match, identifierEscape) =>
+	String.fromCharCode(parseInt(identifierEscape, 16));
 
-function isIdentifier(text) {
-	var unescaped = text.replace(IDENTIFIER_ESCAPE, parseIdentifierEscape);
+const isIdentifier = text => {
+	const unescaped = text.replace(IDENTIFIER_ESCAPE, parseIdentifierEscape);
 
 	return (
 		SIMPLE_IDENTIFIER.test(unescaped) &&
-		RESERVED_WORDS.indexOf(unescaped) === -1
+		!RESERVED_WORDS.has(unescaped)
 	);
-}
+};
 
-function wrapExpression(expression) {
-	return POSSIBLE_COMMENT.test(expression) ? expression + "\n" : expression;
-}
+const wrapExpression = expression =>
+	POSSIBLE_COMMENT.test(expression) ? expression + "\n" : expression;
 
-function count(text, c) {
-	var result = 0;
-	var i = -1;
+const count = (text, c) => {
+	let result = 0;
+	let i = -1;
 
 	while ((i = text.indexOf(c, i + 1)) !== -1) {
 		result++;
 	}
 
 	return result;
-}
+};
 
-function shortestAttributeRepresentation(attributeValue) {
+const shortestAttributeRepresentation = attributeValue => {
 	if (typeof attributeValue !== "string") {
 		throw new TypeError("Attribute value must be a string");
 	}
@@ -120,39 +118,37 @@ function shortestAttributeRepresentation(attributeValue) {
 	return count(attributeValue, '"') > count(attributeValue, '"') ?
 		"='" + attributeValue.replace(/'/g, "&#39;") + "'" :
 		'="' + attributeValue.replace(/"/g, "&#34;") + '"';
-}
+};
 
-function addPossibleConflicts(possibleConflicts, code) {
+const addPossibleConflicts = (possibleConflicts, code) => {
 	// It isn’t possible to refer to a local variable and create a conflict
 	// in strict mode without clearly (or nearly so) specifying the variable’s name.
 	// Since we won’t be using any name but output_*, other letter and digit
 	// characters are not a concern. As for eval – that obviously isn’t possible to work around.
-	var JS_IDENTIFIER = /(?:[a-zA-Z_]|\\u[0-9a-fA-F])(?:\w|\\u[0-9a-fA-F])*/g;
-	var match;
+	const JS_IDENTIFIER = /(?:[a-zA-Z_]|\\u[0-9a-fA-F])(?:\w|\\u[0-9a-fA-F])*/g;
+	let match;
 
 	while ((match = JS_IDENTIFIER.exec(code))) {
-		possibleConflicts[JSON.parse('"' + match[0] + '"')] = true;
+		possibleConflicts.add(JSON.parse('"' + match[0] + '"'));
 	}
-}
+};
 
-function passThrough(compiler, context, node) {
-	node.children.forEach(function (child) {
+const passThrough = (compiler, context, node) => {
+	for (const child of node.children) {
 		compileNode(compiler, context, child);
-	});
-}
+	}
+};
 
-function getScriptIdentifier(templateIdentifier) {
-	return "_" + templateIdentifier.replace(/-/g, "_");
-}
+const getScriptIdentifier = templateIdentifier =>
+	"_" + templateIdentifier.replace(/-/g, "_");
 
-function resolveParameters(macro, node) {
-	var l = Math.min(macro.parameters.length, node.parameters.length);
-	var results = new Array(l);
-	var i;
-	var parameter;
+const resolveParameters = (macro, node) => {
+	const l = Math.min(macro.parameters.length, node.parameters.length);
+	const results = new Array(l);
+	let i;
 
 	for (i = 0; i < l; i++) {
-		parameter = node.parameters[i];
+		const parameter = node.parameters[i];
 
 		if (parameter.name !== null) {
 			break;
@@ -165,8 +161,8 @@ function resolveParameters(macro, node) {
 	}
 
 	for (; i < l; i++) {
-		parameter = node.parameters[i];
-		var parameterIndex = macro.parameters.indexOf(parameter.name);
+		const parameter = node.parameters[i];
+		const parameterIndex = macro.parameters.indexOf(parameter.name);
 
 		if (parameterIndex === -1) {
 			throw parameter.nonexistent;
@@ -183,7 +179,7 @@ function resolveParameters(macro, node) {
 		throw node.parameters[i].unexpected;
 	}
 
-	var missing = [];
+	const missing = [];
 
 	for (i = 0; i < macro.parameters.length; i++) {
 		if (!results[i]) {
@@ -196,61 +192,61 @@ function resolveParameters(macro, node) {
 	}
 
 	return results;
-}
-
-function Scope() {
-	this.used = Object.create(null);
-}
-
-Scope.prototype.getName = function (name) {
-	if (name in this.used) {
-		var i = 1;
-
-		while ((name + "_" + i) in this.used) {
-			i++;
-		}
-
-		name += "_" + i;
-	}
-
-	this.used[name] = true;
-	return name;
 };
 
-var transform = {
+class Scope {
+	constructor() {
+		this.used = new Set();
+	}
+
+	getName(name) {
+		if (this.used.has(name)) {
+			let i = 1;
+
+			while (this.used.has(name + "_" + i)) {
+				i++;
+			}
+
+			name += "_" + i;
+		}
+
+		this.used.add(name);
+		return name;
+	}
+}
+
+const transform = {
 	root: passThrough,
 	block: passThrough,
-	element: function (compiler, context, node) {
+	element: (compiler, context, node) => {
 		if (!context.content) {
 			throw node.unexpected;
 		}
 
-		var name = node.name.toLowerCase();
-		var isVoid = voidTags.indexOf(name) !== -1;
+		const name = node.name.toLowerCase();
+		const isVoid = voidTags.has(name);
 
-		var newContext = {
+		const newContext = {
 			attributes: new CodeBlock().addText(null, "<" + name),
-			content: !isVoid && new CodeBlock(),
+			content: isVoid ? null : new CodeBlock(),
 			classes: new CodeBlock(),
 		};
 
-		node.children.forEach(function (child) {
+		for (const child of node.children) {
 			compileNode(compiler, newContext, child);
-		});
+		}
 
 		context.content.addBlock(newContext.attributes);
 
 		if (newContext.classes.parts.length) {
-			for (var i = 0; i < newContext.classes.parts.length; i++) {
-				var part = newContext.classes.parts[i];
-
+			for (const part of newContext.classes.parts) {
 				if (part.type === "text") {
 					part.value = part.value.substring(1);
 					break;
 				}
 			}
 
-			var classText = newContext.classes.toTextOrNull(null);
+			const classText = newContext.classes.toTextOrNull(null);
 
 			if (classText === null) {
 				context.content.addText(null, " class=\"");
@@ -263,13 +259,12 @@ var transform = {
 
 		context.content.addText(null, ">");
 
-		context.content.addBlock(newContext.content);
-
 		if (!isVoid) {
+			context.content.addBlock(newContext.content);
 			context.content.addText(null, "</" + name + ">");
 		}
 	},
-	attribute: function (compiler, context, node) {
+	attribute: (compiler, context, node) => {
 		if (!context.attributes) {
 			throw node.unexpected;
 		}
@@ -277,7 +272,7 @@ var transform = {
 		context.attributes.addText(null, " " + node.name);
 
 		if (node.value !== null && node.value.value.parts.length !== 0) {
-			var text = node.value.value.toTextOrNull(escapes.escapeDoubleQuotedAttributeValue);
+			const text = node.value.value.toTextOrNull(escapes.escapeDoubleQuotedAttributeValue);
 
 			if (text === null) {
 				context.attributes.addText(null, "=\"");
@@ -287,69 +282,63 @@ var transform = {
 				context.attributes.addText(null, shortestAttributeRepresentation(text));
 			}
 
-			for (var i = 0; i < node.value.value.parts.length; i++) {
-				var part = node.value.value.parts[i];
-
+			for (const part of node.value.value.parts) {
 				if (part.type === "expression") {
 					addPossibleConflicts(compiler.possibleConflicts, part.value);
 				}
 			}
 		}
 	},
-	string: function (compiler, context, node) {
+	string: (compiler, context, node) => {
 		if (!context.content) {
 			throw node.unexpected;
 		}
 
 		context.content.addBlock(node.value);
 
-		for (var i = 0; i < node.value.parts.length; i++) {
-			var part = node.value.parts[i];
-
+		for (const part of node.value.parts) {
 			if (part.type === "expression") {
 				addPossibleConflicts(compiler.possibleConflicts, part.value);
 			}
 		}
 	},
-	class: function (compiler, context, node) {
+	class: (compiler, context, node) => {
 		if (!context.classes) {
 			throw node.unexpected;
 		}
 
 		context.classes.addText(null, " " + node.value);
 	},
-	code: function (compiler, context, node) {
+	code: (compiler, context, node) => {
 		context.content.addCode(wrapExpression(node.code) + ";");
 
 		addPossibleConflicts(compiler.possibleConflicts, node.code);
 	},
-	include: function (compiler, context, node) {
-		var subtree = compiler.options.load(node.template);
+	include: (compiler, context, node) => {
+		const subtree = compiler.options.load(node.template);
 
-		for (var macroName in subtree.macros) {
-			if (macroName in compiler.tree.macros) {
-				throw new SyntaxError("Included template " + node.template + " redefines the macro named “" + macroName + "”.");
+		for (const [macroName, macro] of subtree.macros) {
+			if (compiler.tree.macros.has(macroName)) {
+				throw new SyntaxError(`Included template ${node.template} redefines the macro named “${macroName}”.`);
 			}
 
-			compiler.tree.macros[macroName] = subtree.macros[macroName];
+			compiler.tree.macros.set(macroName, macro);
 		}
 
 		compileNode(compiler, context, subtree);
 	},
-	if: function (compiler, context, node) {
-		var condition = wrapExpression(node.condition);
+	if: (compiler, context, node) => {
+		let condition = wrapExpression(node.condition);
 
-		var newContext = {
+		const newContext = {
 			content: new CodeBlock(),
 			attributes: context.attributes && new CodeBlock(),
 			classes: context.classes && new CodeBlock(),
 		};
 
-		var elseContext;
-
-		node.children.forEach(function (child) {
+		for (const child of node.children) {
 			compileNode(compiler, newContext, child);
-		});
+		}
 
 		if (node.elif.length) {
 			node.else = {
@@ -365,6 +354,8 @@ var transform = {
 			};
 		}
 
+		let elseContext = null;
+
 		if (node.else) {
 			elseContext = {
 				content: new CodeBlock(),
@@ -372,21 +363,21 @@ var transform = {
 				classes: context.classes && new CodeBlock(),
 			};
 
-			node.else.children.forEach(function (child) {
+			for (const child of node.else.children) {
 				compileNode(compiler, elseContext, child);
-			});
+			}
 		}
 
-		var conditionName = compiler.scope.getName("condition");
+		const conditionName = compiler.scope.getName("condition");
 		(context.attributes || context.content).addCode("var " + conditionName + " = (" + condition + ");");
 		condition = conditionName;
 
-		var hasIfAttributes = newContext.attributes && newContext.attributes.parts.length;
-		var hasElseAttributes = elseContext && elseContext.attributes && elseContext.attributes.parts.length;
-		var hasIfClasses = newContext.classes && newContext.classes.parts.length;
-		var hasElseClasses = elseContext && elseContext.classes && elseContext.classes.parts.length;
-		var hasIfContent = newContext.content && newContext.content.parts.length;
-		var hasElseContent = elseContext && elseContext.content && elseContext.content.parts.length;
+		const hasIfAttributes = newContext.attributes && newContext.attributes.parts.length;
+		const hasElseAttributes = elseContext && elseContext.attributes && elseContext.attributes.parts.length;
+		const hasIfClasses = newContext.classes && newContext.classes.parts.length;
+		const hasElseClasses = elseContext && elseContext.classes && elseContext.classes.parts.length;
+		const hasIfContent = newContext.content && newContext.content.parts.length;
+		const hasElseContent = elseContext && elseContext.content && elseContext.content.parts.length;
 
 		if (hasIfAttributes || hasElseAttributes) {
 			context.attributes.addCode("if (" + condition + ") {");
@@ -435,48 +426,49 @@ var transform = {
 
 		if (node.indexName !== null) {
 			context.content.addCode("{ let " + node.indexName + " = 0;");
-			indexNameUsed = compiler.scope.used[node.indexName];
-			compiler.scope.used[node.indexName] = true;
+			indexNameUsed = compiler.scope.used.has(node.indexName);
+			compiler.scope.used.add(node.indexName);
 		}
 
 		context.content.addCode("for (const " + node.variable + " of (" + collection + ")) {");
 
-		node.children.forEach(child => {
+		for (const child of node.children) {
 			compileNode(compiler, newContext, child);
-		});
+		}
 
 		if (node.indexName !== null) {
 			context.content.addCode(node.indexName + "++; }");
 
 			if (!indexNameUsed) {
-				delete compiler.scope.used[node.indexName];
+				compiler.scope.used.delete(node.indexName);
 			}
 		}
 
 		context.content.addCode("}");
 	},
-	call: function (compiler, context, node) {
-		if (!(node.name in compiler.tree.macros)) {
+	call: (compiler, context, node) => {
+		const macro = compiler.tree.macros.get(node.name);
+
+		if (macro === undefined) {
 			throw node.macroUndefined;
 		}
 
-		var macro = compiler.tree.macros[node.name];
-		var macroFunctions =
+		const macroFunctions =
 			context.attributes ?
 				compiler.top.attributesMacroFunctions :
 				compiler.top.contentOnlyMacroFunctions;
-		var macroFunction = macroFunctions.get(node);
-		var parameters = resolveParameters(macro, node);
-		var recursiveIndex = compiler.calls.indexOf(node);
+		let macroFunction = macroFunctions.get(node);
+		const parameters = resolveParameters(macro, node);
+		const recursiveIndex = compiler.calls.indexOf(node);
 
 		if (recursiveIndex === -1) {
-			var pushContext = context.attributes || context.content;
-			var popContext = context.content || context.attributes;
-			var namesInfo = parameters.map(function (parameter) {
-				var originalName = null;
-				var temporaryName = null;
+			const pushContext = context.attributes || context.content;
+			const popContext = context.content || context.attributes;
+			const namesInfo = parameters.map(parameter => {
+				let originalName = null;
+				let temporaryName = null;
 
-				if (parameter.name in compiler.scope.used) {
+				if (compiler.scope.used.has(parameter.name)) {
 					originalName = compiler.scope.getName("original_" + parameter.name);
 					pushContext.addCode("var " + originalName + " = " + parameter.name + ";");
 
@@ -485,7 +477,7 @@ var transform = {
 						context.content.addCode(parameter.name + " = " + temporaryName + ";");
 					}
 				} else {
-					compiler.scope.used[parameter.name] = true;
+					compiler.scope.used.add(parameter.name);
 				}
 
 				pushContext.addCode("var " + parameter.name + " = " + wrapExpression(parameter.value) + ";");
@@ -501,8 +493,8 @@ var transform = {
 			passThrough(compiler, context, macro);
 			compiler.calls.pop();
 
-			parameters.forEach(function (parameter, i) {
-				var nameInfo = namesInfo[i];
+			parameters.forEach((parameter, i) => {
+				const nameInfo = namesInfo[i];
 
 				if (nameInfo.originalName) {
 					if (nameInfo.temporaryName) {
@@ -517,7 +509,7 @@ var transform = {
 			return;
 		}
 
-		var redefine = !macroFunction || !context.attributes && compiler.calls.indexOf(node, recursiveIndex + 1) === -1;
+		const redefine = !macroFunction || !context.attributes && !compiler.calls.includes(node, recursiveIndex + 1);
 
 		if (!macroFunction) {
 			macroFunction = compiler.scope.getName(
@@ -532,7 +524,7 @@ var transform = {
 			compiler.calls.push(node);
 
 			if (context.attributes) {
-				var newContext = {
+				const newContext = {
 					content: new CodeBlock(),
 					attributes: new CodeBlock(),
 					classes: new CodeBlock(),
@@ -540,38 +532,36 @@ var transform = {
 
 				passThrough(compiler, newContext, macro);
 
-				var attributeOutputVariable = compiler.scope.getName("attributeOutput");
-				var classOutputVariable = compiler.scope.getName("classOutput");
-				var contentOutputVariable = compiler.scope.getName("contentOutput");
+				const attributeOutputVariable = compiler.scope.getName("attributeOutput");
+				const classOutputVariable = compiler.scope.getName("classOutput");
+				const contentOutputVariable = compiler.scope.getName("contentOutput");
 
-				var definition =
-					"function " + macroFunction + "(" + macro.parameters.join(", ") + ") {\n" +
-						"var " + attributeOutputVariable + " = '" + newContext.attributes.toCode(attributeOutputVariable, "text") +
-						"var " + classOutputVariable + " = '" + newContext.classes.toCode(classOutputVariable, "text") +
-						"var " + contentOutputVariable + " = '" + newContext.content.toCode(contentOutputVariable, "text") +
+				const definition =
+					"const " + macroFunction + " = (" + macro.parameters.join(", ") + ") => {\n" +
+						"let " + attributeOutputVariable + " = '" + newContext.attributes.toCode(attributeOutputVariable, "text") +
+						"let " + classOutputVariable + " = '" + newContext.classes.toCode(classOutputVariable, "text") +
+						"let " + contentOutputVariable + " = '" + newContext.content.toCode(contentOutputVariable, "text") +
 						"\n\nreturn { attributes: " + attributeOutputVariable + ", classes: " + classOutputVariable + ", content: " + contentOutputVariable + " };" +
-					"}\n";
+					"};\n";
 
 				compiler.top.macroDefinitions.push(definition);
 			} else {
-				context.content.addCode("function " + macroFunction + "(" + macro.parameters.join(", ") + ") {");
+				context.content.addCode("const " + macroFunction + " = (" + macro.parameters.join(", ") + ") => {");
 				passThrough(compiler, context, macro);
-				context.content.addCode("}");
+				context.content.addCode("};");
 			}
 
 			compiler.calls.pop();
 		}
 
-		var parameterList =
+		const parameterList =
 			parameters
-				.map(function (parameter) {
-					return "(" + wrapExpression(parameter.value) + ")";
-				})
+				.map(parameter => "(" + wrapExpression(parameter.value) + ")")
 				.join(", ");
 
 		if (context.attributes) {
-			var resultName = compiler.scope.getName("moutput");
-			context.attributes.addCode("var " + resultName + " = " + macroFunction + "(" + parameterList + ");");
+			const resultName = compiler.scope.getName("moutput");
+			context.attributes.addCode("const " + resultName + " = " + macroFunction + "(" + parameterList + ");");
 			context.attributes.addExpression(null, resultName + ".attributes");
 			context.classes.addExpression(null, resultName + ".classes");
 			context.content.addExpression(null, resultName + ".content");
@@ -579,8 +569,8 @@ var transform = {
 			context.content.addCode(macroFunction + "(" + parameterList + ");");
 		}
 	},
-	yield: function (compiler, context, node) {
-		var macro = node;
+	yield: (compiler, context, node) => {
+		let macro = node;
 
 		do {
 			macro = macro.parent;
@@ -590,21 +580,21 @@ var transform = {
 			throw node.unexpected;
 		}
 
-		macro.yieldContent.forEach(function (yieldNode) {
+		for (const yieldNode of macro.yieldContent) {
 			compileNode(compiler, context, yieldNode);
-		});
+		}
 	},
 };
 
-function compileNode(compiler, context, node) {
-	var transformer = transform[node.type];
+const compileNode = (compiler, context, node) => {
+	const transformer = transform[node.type];
 
 	if (!transformer) {
 		throw new Error("Unknown node type " + node.type + ".");
 	}
 
 	transformer(compiler, context, node);
-}
+};
 
 const compile = (tree, options) => {
 	const scope = new Scope();

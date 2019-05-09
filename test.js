@@ -1,12 +1,12 @@
 "use strict";
 
-var razorleaf = require("./");
-var Markup = require("./markup");
-var parser = require("./parser");
+const razorleaf = require("./");
+const Markup = require("./markup");
+const parser = require("./parser");
 
-var PARSER_ERROR_MESSAGE = /^(.+) at line \d+, character \d+ in <Razor Leaf template>/;
+const PARSER_ERROR_MESSAGE = /^(.+) at line \d+, character \d+ in <Razor Leaf template>/;
 
-var tests = [
+const tests = [
 	{
 		name: "interpolation without identifiers",
 		template: '"#{5}"',
@@ -144,9 +144,7 @@ var tests = [
 		data: { count: 99 },
 		options: {
 			globals: {
-				s: function (n) {
-					return n === 1 ? "" : "s";
-				},
+				s: n => n === 1 ? "" : "s",
 			},
 		},
 		expected: { output: "99 red balloons" },
@@ -304,32 +302,21 @@ var tests = [
 	},
 ];
 
-function extend(a, b) {
-	for (var k in b) {
-		if (b.hasOwnProperty(k)) {
-			a[k] = b[k];
-		}
-	}
+const passes = test => {
+	let output;
+	let error;
+	let errorMessage;
 
-	return a;
-}
-
-function passes(test) {
-	var output;
-	var error;
-	var errorMessage;
-
-	var options = {
-		load: function (name) {
-			return parser.parse(test.include[name], options);
-		},
+	const options = {
+		load: name =>
+			parser.parse(test.include[name], options),
+		...test.options,
 	};
 
 	try {
-		output = razorleaf.compile(test.template, extend(options, test.options))(test.data);
+		output = razorleaf.compile(test.template, options)(test.data);
 	} catch (e) {
-		var m = PARSER_ERROR_MESSAGE.exec(e.message);
-
+		const m = PARSER_ERROR_MESSAGE.exec(e.message);
 		error = e;
 		errorMessage = m ? m[1] : e.message;
 	}
@@ -342,6 +329,6 @@ function passes(test) {
 	console.log("\x1b[%s\x1b[0m \x1b[1m%s\x1b[0m failed", test.fails ? "33m-" : "31m✘", test.name);
 	console.log(error ? error.stack.replace(/^/gm, "  ") : "  Output: " + output);
 	return test.fails;
-}
+};
 
-process.exit(!tests.every(passes));
+process.exitCode = !tests.every(passes);

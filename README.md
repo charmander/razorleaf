@@ -192,7 +192,7 @@ html
 ```
 
 ```html
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>Example</title><link rel="stylesheet" type="text/css" href="stylesheets/example.css"></head><body><p id="introduction">This template is a brief example of hierarchy.</p></body></html>
+<!DOCTYPE html><html><head><meta charset=utf-8><title>Example</title><link rel=stylesheet type=text/css href=stylesheets/example.css></head><body><p id=introduction>This template is a brief example of hierarchy.</p></body></html>
 ```
 
 Content found after an element on the same line will also be considered that

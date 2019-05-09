@@ -1,32 +1,32 @@
 #!/usr/bin/env node
 "use strict";
 
-var fs = require("fs");
-var vm = require("vm");
+const fs = require("fs");
+const vm = require("vm");
 
-var razorleaf = require("./");
-var DirectoryLoader = require("./directory-loader");
+const razorleaf = require("./");
+const DirectoryLoader = require("./directory-loader");
 
-function showUsage() {
+const showUsage = () => {
 	console.error("Usage: razorleaf [-d|--data <expression>] [<template file>]");
-}
+};
 
-function readToEnd(textStream, callback) {
-	var text = "";
+const readToEnd = (textStream, callback) => {
+	let text = "";
 
-	textStream.on("data", function (part) {
+	textStream.on("data", part => {
 		text += part;
 	});
 
-	textStream.on("end", function () {
+	textStream.on("end", () => {
 		callback(null, text);
 	});
 
 	textStream.on("error", callback);
-}
+};
 
-function evalExpression(js) {
-	var isExpression;
+const evalExpression = js => {
+	let isExpression;
 
 	try {
 		/* eslint-disable no-new */
@@ -44,17 +44,14 @@ function evalExpression(js) {
 			"(" + js + "\n)" :
 			js
 	);
-}
+};
 
-function firstIndex(a, b) {
-	return (
-		a === -1 ? b :
-		b === -1 ? a :
-		a < b ? a : b
-	);
-}
+const firstIndex = (a, b) =>
+	a === -1 ? b :
+	b === -1 ? a :
+	a < b ? a : b;
 
-function mainWithOptions(options, args) {
+const mainWithOptions = (options, args) => {
 	args = args.slice();
 
 	if (args[0] === "-h" || args[0] === "--help") {
@@ -62,14 +59,14 @@ function mainWithOptions(options, args) {
 		return;
 	}
 
-	var separator = args.indexOf("--");
+	const separator = args.indexOf("--");
 
 	if (separator !== -1) {
 		args.splice(separator, 1);
 	}
 
-	var d = firstIndex(args.indexOf("-d"), args.indexOf("--data"));
-	var dataExpression = null;
+	const d = firstIndex(args.indexOf("-d"), args.indexOf("--data"));
+	let dataExpression = null;
 
 	if (d !== -1 && (separator === -1 || d < separator)) {
 		if (d + 1 === args.length) {
@@ -88,32 +85,32 @@ function mainWithOptions(options, args) {
 		return;
 	}
 
-	var data = dataExpression ? evalExpression(dataExpression) : null;
+	const data = dataExpression ? evalExpression(dataExpression) : null;
 
-	function read(error, templateSource) {
+	const read = (error, templateSource) => {
 		if (error) {
 			throw error;
 		}
 
-		var loader = new DirectoryLoader(".", options);
-		var template = razorleaf.compile(templateSource, loader.options);
+		const loader = new DirectoryLoader(".", options);
+		const template = razorleaf.compile(templateSource, loader.options);
 		process.stdout.write(template(data));
-	}
+	};
 
 	if (args.length === 0 || args[0] === "-") {
 		readToEnd(process.stdin, read);
 	} else {
 		fs.readFile(args[0], "utf-8", read);
 	}
-}
+};
 
-function main(args) {
+const main = args => {
 	mainWithOptions(undefined, args);
-}
+};
 
 module.exports = {
-	main: main,
-	mainWithOptions: mainWithOptions,
+	main,
+	mainWithOptions,
 };
 
 if (module === require.main) {

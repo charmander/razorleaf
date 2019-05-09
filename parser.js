@@ -1,18 +1,18 @@
 /* eslint-disable no-shadow */
 "use strict";
 
-var CodeBlock = require("./internal/code-block");
-var escapes = require("./escapes");
-var push = Array.prototype.push;
+const CodeBlock = require("./internal/code-block");
+const extend = require("./internal/extend");
+const escapes = require("./escapes");
 
-var HEX = /[\da-fA-F]/;
-var DIGIT = /\d/;
-var IDENTIFIER = /[\w-]/;
-var RECOGNIZABLE = /[!-~]/;
-var POSSIBLE_COMMENT = /\/\/|<!--/;
-var BLOCK_OR_TEMPLATE_NAME = /\S/;
-var JS_IDENTIFIER = /\w/;
-var JS_RESERVED_WORDS = new Set([
+const HEX = /[\da-fA-F]/;
+const DIGIT = /\d/;
+const IDENTIFIER = /[\w-]/;
+const RECOGNIZABLE = /[!-~]/;
+const POSSIBLE_COMMENT = /\/\/|<!--/;
+const BLOCK_OR_TEMPLATE_NAME = /\S/;
+const JS_IDENTIFIER = /\w/;
+const JS_RESERVED_WORDS = new Set([
 	"arguments",
 	"class",
 	"const",
@@ -33,23 +33,18 @@ var JS_RESERVED_WORDS = new Set([
 	"yield",
 ]);
 
-var singleCharEscapes = Object.assign(
-	Object.create(null),
-	{
-		"\\": "\\",
-		n: "\n",
-		r: "\r",
-		t: "\t",
-		v: "\v",
-		f: "\f",
-		b: "\b",
-		0: "\0",
-	}
-);
+const singleCharEscapes = new Map([
+	["\\", "\\"],
+	["n", "\n"],
+	["r", "\r"],
+	["t", "\t"],
+	["v", "\v"],
+	["f", "\f"],
+	["b", "\b"],
+	["0", "\0"],
+]);
 
-var keywords;
-
-function isExpression(js) {
+const isExpression = js => {
 	try {
 		/* eslint-disable no-new */
 		new Function("'use strict'; (" + js + "\n)");
@@ -60,57 +55,33 @@ function isExpression(js) {
 	} catch (e) {
 		return false;
 	}
-}
+};
 
-function isIdentifierCharacter(c) {
-	return c !== null && IDENTIFIER.test(c);
-}
+const isIdentifierCharacter = c =>
+	c !== null && IDENTIFIER.test(c);
 
-function isLeadingSurrogate(code) {
-	return code >= 0xd800 && code <= 0xdbff;
-}
+const isLeadingSurrogate = code =>
+	code >= 0xd800 && code <= 0xdbff;
 
-function fromCodePoint(codePoint) {
-	if (codePoint < 0x10000) {
-		return String.fromCharCode(codePoint);
-	}
-
-	codePoint -= 0x10000;
-
-	var leadSurrogate = (codePoint >>> 10) + 0xd800;
-	var trailSurrogate = (codePoint & 0x3ff) + 0xdc00;
-
-	return String.fromCharCode(leadSurrogate, trailSurrogate);
-}
-
-function describeCharacter(c) {
+const describeCharacter = c => {
 	if (RECOGNIZABLE.test(c)) {
 		return c;
 	}
 
-	var code = c.charCodeAt(0);
-
-	if (isLeadingSurrogate(code)) {
-		var trailSurrogate = c.charCodeAt(1);
-
-		if (trailSurrogate) {
-			code = ((code - 0xd800) << 10 | (trailSurrogate - 0xdc00)) + 0x10000;
-		}
-	}
-
+	const code = c.codePointAt(0);
 	return "U+" + code.toString(16).toUpperCase();
-}
+};
 
-function describeString(s) {
-	var json = JSON.stringify(s);
+const describeString = s => {
+	const json = JSON.stringify(s);
 
-	return s.indexOf("'") === -1 ?
-		"'" + json.slice(1, -1).replace(/\\"/g, '"') + "'" :
-		json;
-}
+	return s.includes("'") ?
+		json :
+		"'" + json.slice(1, -1).replace(/\\"/g, '"') + "'";
+};
 
-function describeList(list, maxLength) {
-	var itemDescriptions =
+const describeList = (list, maxLength) => {
+	const itemDescriptions =
 		list.slice(0, maxLength)
 			.map(describeString)
 			.join(", ");
@@ -118,9 +89,9 @@ function describeList(list, maxLength) {
 	return list.length > maxLength ?
 		"[" + itemDescriptions + ", …]" :
 		"[" + itemDescriptions + "]";
-}
+};
 
-function indentState(parser, c) {
+const indentState = (parser, c) => {
 	if (c === null) {
 		return null;
 	}
@@ -139,10 +110,10 @@ function indentState(parser, c) {
 			parser.indent = 0;
 		} else if (parser.indentType) {
 			if (parser.indentType.indentCharacter === "\t") {
-				var i = parser.indentString.indexOf(" ");
+				const i = parser.indentString.indexOf(" ");
 				parser.indent = i === -1 ? parser.indentString.length : i;
 			} else {
-				var level = parser.indentString.length / parser.indentType.spaces;
+				const level = parser.indentString.length / parser.indentType.spaces;
 
 				if (level !== (level | 0)) {
 					throw parser.error("Invalid indent level " + level + "; indent was determined to be " + parser.indentType.name + " by line " + parser.indentType.determined.line + ", character " + parser.indentType.determined.character);
@@ -175,7 +146,7 @@ function indentState(parser, c) {
 
 		if (parser.indent > parser.context.indent + 1) {
 			if (parser.context.type === "code") {
-				var unitsPerLevel =
+				const unitsPerLevel =
 					parser.indentType.indentCharacter === "\t" ?
 						1 :
 						parser.indentType.spaces;
@@ -195,9 +166,9 @@ function indentState(parser, c) {
 
 	parser.indentString += c;
 	return indentState;
-}
+};
 
-function contentState(parser, c) {
+const contentState = (parser, c) => {
 	if (c === null) {
 		return null;
 	}
@@ -265,17 +236,17 @@ function contentState(parser, c) {
 	}
 
 	throw parser.error("Unexpected " + describeCharacter(c));
-}
+};
 
-function commentState(parser, c) {
+const commentState = (parser, c) => {
 	if (c === null || c === "\n") {
 		return contentState(parser, c);
 	}
 
 	return commentState;
-}
+};
 
-function codeBlockState(parser, c) {
+const codeBlockState = (parser, c) => {
 	if (c === null) {
 		return contentState(parser, c);
 	}
@@ -285,9 +256,9 @@ function codeBlockState(parser, c) {
 	return c === "\n" ?
 		contentState(parser, c) :
 		codeBlockState;
-}
+};
 
-function identifierState(parser, c) {
+const identifierState = (parser, c) => {
 	if (c === ":") {
 		return possibleAttributeState;
 	}
@@ -301,6 +272,7 @@ function identifierState(parser, c) {
 		return identifierState;
 	}
 
+	// eslint-disable-next-line no-prototype-builtins
 	if (keywords.hasOwnProperty(parser.identifier)) {
 		return keywords[parser.identifier](parser, c);
 	}
@@ -318,9 +290,9 @@ function identifierState(parser, c) {
 	parser.context.parent.children.push(parser.context);
 
 	return contentState(parser, c);
-}
+};
 
-function classNameState(parser, c) {
+const classNameState = (parser, c) => {
 	if (isIdentifierCharacter(c)) {
 		parser.identifier += c;
 		return classNameState;
@@ -339,9 +311,9 @@ function classNameState(parser, c) {
 	});
 
 	return contentState(parser, c);
-}
+};
 
-function possibleAttributeState(parser, c) {
+const possibleAttributeState = (parser, c) => {
 	if (isIdentifierCharacter(c)) {
 		parser.identifier += ":" + c;
 		return identifierState;
@@ -362,9 +334,9 @@ function possibleAttributeState(parser, c) {
 	};
 
 	return afterAttributeNameState(parser, c);
-}
+};
 
-function afterAttributeNameState(parser, c) {
+const afterAttributeNameState = (parser, c) => {
 	if (c === " ") {
 		return afterAttributeNameState;
 	}
@@ -382,17 +354,17 @@ function afterAttributeNameState(parser, c) {
 	}
 
 	throw parser.error("Expected attribute value or “if”");
-}
+};
 
-function attributeIf0State(parser, c) {
+const attributeIf0State = (parser, c) => {
 	if (c === "f") {
 		return attributeIf1State;
 	}
 
 	throw parser.error("Expected attribute value or “if”", parser.identifierStart);
-}
+};
 
-function attributeIf1State(parser, c) {
+const attributeIf1State = (parser, c) => {
 	if (c === " ") {
 		parser.context = {
 			type: "if",
@@ -411,26 +383,26 @@ function attributeIf1State(parser, c) {
 	}
 
 	throw parser.error("Expected attribute value or “if”", parser.identifierStart);
-}
+};
 
-function attributeConditionSpaceState(parser, c) {
+const attributeConditionSpaceState = (parser, c) => {
 	if (c === " ") {
 		return attributeConditionSpaceState;
 	}
 
 	return attributeConditionState(parser, c);
-}
+};
 
-function attributeConditionState(parser, c) {
+const attributeConditionState = (parser, c) => {
 	if (c === null || c === "\n") {
 		return contentState(parser, c);
 	}
 
 	parser.context.condition += c;
 	return attributeConditionState;
-}
+};
 
-function macroCallState(parser, c) {
+const macroCallState = (parser, c) => {
 	parser.context = {
 		type: "call",
 		name: parser.identifier,
@@ -448,22 +420,21 @@ function macroCallState(parser, c) {
 	parser.badMacroCallParameters = [];
 
 	return macroCallBeforeParameterState(parser, c);
-}
+};
 
-function macroCallBeforeParameterState(parser, c) {
+const macroCallBeforeParameterState = (parser, c) => {
 	if (c === " " || c === "\n" || c === "\t") {
 		return macroCallBeforeParameterState;
 	}
 
 	if (c === ")") {
-		var endPosition = parser.getPosition();
+		const endPosition = parser.getPosition();
 
-		parser.context.missing = function (missing) {
-			return parser.error(
+		parser.context.missing = missing =>
+			parser.error(
 				(missing.length === 1 ? "Missing value for parameter " : "Missing values for parameters ") + missing.join(", "),
 				endPosition
 			);
-		};
 
 		return contentState;
 	}
@@ -481,9 +452,9 @@ function macroCallBeforeParameterState(parser, c) {
 		parser.macroCallParameterName = null;
 		return macroCallParameterState(parser, c);
 	}
-}
+};
 
-function macroCallPossibleNamedParameterState(parser, c) {
+const macroCallPossibleNamedParameterState = (parser, c) => {
 	if (c === ":") {
 		return macroCallAfterParameterNameState;
 	}
@@ -496,9 +467,9 @@ function macroCallPossibleNamedParameterState(parser, c) {
 	parser.macroCallParameter = parser.macroCallParameterName;
 	parser.macroCallParameterName = null;
 	return macroCallParameterState(parser, c);
-}
+};
 
-function macroCallAfterParameterNameState(parser, c) {
+const macroCallAfterParameterNameState = (parser, c) => {
 	if (c === " ") {
 		return macroCallAfterParameterNameState;
 	}
@@ -509,17 +480,15 @@ function macroCallAfterParameterNameState(parser, c) {
 
 	if (
 		parser.macroCallParameterName !== null &&
-		parser.context.parameters.some(function (parameter) {
-			return parameter.name === parser.macroCallParameterName;
-		})
+		parser.context.parameters.some(parameter => parameter.name === parser.macroCallParameterName)
 	) {
 		throw parser.error("A value has already been specified for the parameter “" + parser.macroCallParameterName + "”", parser.macroCallParameterStart, parser.macroCallParameterName.length + 1);
 	}
 
 	return macroCallParameterState(parser, c);
-}
+};
 
-function macroCallParameterState(parser, c) {
+const macroCallParameterState = (parser, c) => {
 	if (c === null) {
 		if (parser.badMacroCallParameters.length === 0) {
 			throw parser.error("Unclosed macro call", parser.macroCallStart);
@@ -532,9 +501,7 @@ function macroCallParameterState(parser, c) {
 		if (isExpression(parser.macroCallParameter)) {
 			if (
 				parser.macroCallParameterName === null &&
-				parser.context.parameters.some(function (parameter) {
-					return parameter.name !== null;
-				})
+				parser.context.parameters.some(parameter => parameter.name !== null)
 			) {
 				throw parser.error("A positional parameter can’t be placed after a named parameter", parser.macroCallParameterStart, parser.macroCallParameter.length);
 			}
@@ -560,12 +527,12 @@ function macroCallParameterState(parser, c) {
 			}
 		}
 
-		var lastTerminator = Math.max(
+		const lastTerminator = Math.max(
 			parser.macroCallParameter.lastIndexOf(")"),
 			parser.macroCallParameter.lastIndexOf(",")
 		);
 
-		var badParameter =
+		const badParameter =
 			lastTerminator === -1 ?
 				parser.macroCallParameter :
 				"…" + parser.macroCallParameter.substring(lastTerminator);
@@ -575,9 +542,9 @@ function macroCallParameterState(parser, c) {
 
 	parser.macroCallParameter += c;
 	return macroCallParameterState;
-}
+};
 
-function rawStringState(parser, c) {
+const rawStringState = (parser, c) => {
 	if (c === "!") {
 		parser.escapeFunction = null;
 		return doubleRawStringState;
@@ -588,23 +555,23 @@ function rawStringState(parser, c) {
 	}
 
 	return stringState;
-}
+};
 
-function doubleRawStringState(parser, c) {
+const doubleRawStringState = (parser, c) => {
 	if (c !== '"') {
 		throw parser.error("Expected beginning quote of raw string, not " + describeCharacter(c));
 	}
 
 	return stringState;
-}
+};
 
-function stringState(parser, c) {
+const stringState = (parser, c) => {
 	if (c === null) {
 		throw parser.error("Expected end of string before end of file");
 	}
 
 	if (c === '"') {
-		var string = {
+		const string = {
 			type: "string",
 			value: parser.string,
 			parent: parser.context,
@@ -633,9 +600,9 @@ function stringState(parser, c) {
 	parser.string.addText(parser.literalEscapeFunction, c);
 
 	return stringState;
-}
+};
 
-function stringPoundState(parser, c) {
+const stringPoundState = (parser, c) => {
 	if (c === "{") {
 		parser.interpolation = "";
 		parser.interpolationStart = parser.getPosition();
@@ -645,9 +612,9 @@ function stringPoundState(parser, c) {
 
 	parser.string.addText(parser.literalEscapeFunction, "#");
 	return stringState(parser, c);
-}
+};
 
-function interpolationState(parser, c) {
+const interpolationState = (parser, c) => {
 	if (c === null) {
 		if (parser.badInterpolations.length === 0) {
 			throw parser.error("Unclosed interpolation", parser.interpolationStart);
@@ -658,13 +625,13 @@ function interpolationState(parser, c) {
 
 	if (c === "}") {
 		if (isExpression(parser.interpolation)) {
-			var interpolation = POSSIBLE_COMMENT.test(parser.interpolation) ? parser.interpolation + "\n" : parser.interpolation;
+			const interpolation = POSSIBLE_COMMENT.test(parser.interpolation) ? parser.interpolation + "\n" : parser.interpolation;
 			parser.string.addExpression(parser.escapeFunction, interpolation);
 			return stringState;
 		}
 
-		var lastBrace = parser.interpolation.lastIndexOf("}");
-		var badInterpolation =
+		const lastBrace = parser.interpolation.lastIndexOf("}");
+		const badInterpolation =
 			lastBrace === -1 ?
 				parser.interpolation :
 				"…" + parser.interpolation.substring(lastBrace);
@@ -673,9 +640,9 @@ function interpolationState(parser, c) {
 
 	parser.interpolation += c;
 	return interpolationState;
-}
+};
 
-function escapeState(parser, c) {
+const escapeState = (parser, c) => {
 	if (c === "#" || c === '"') {
 		parser.string.addText(parser.literalEscapeFunction, c);
 		return stringState;
@@ -689,36 +656,38 @@ function escapeState(parser, c) {
 		return escapeU1;
 	}
 
-	if (c in singleCharEscapes) {
-		parser.string.addText(parser.literalEscapeFunction, singleCharEscapes[c]);
+	const escapedValue = singleCharEscapes.get(c);
+
+	if (escapedValue !== undefined) {
+		parser.string.addText(parser.literalEscapeFunction, escapedValue);
 		return stringState;
 	}
 
 	throw parser.error("Expected escape sequence");
-}
+};
 
-function escapeX1(parser, c) {
+const escapeX1 = (parser, c) => {
 	if (c === null || !HEX.test(c)) {
 		throw parser.error("Expected hexadecimal digit");
 	}
 
 	parser.charCode = parseInt(c, 16) << 4;
 	return escapeX2;
-}
+};
 
-function escapeX2(parser, c) {
+const escapeX2 = (parser, c) => {
 	if (c === null || !HEX.test(c)) {
 		throw parser.error("Expected hexadecimal digit");
 	}
 
-	var escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
+	const escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
 
 	parser.string.addText(parser.literalEscapeFunction, escapedCharacter);
 
 	return stringState;
-}
+};
 
-function escapeU1(parser, c) {
+const escapeU1 = (parser, c) => {
 	if (c === "{") {
 		return extendedUnicodeEscapeState;
 	}
@@ -729,51 +698,51 @@ function escapeU1(parser, c) {
 
 	parser.charCode = parseInt(c, 16) << 12;
 	return escapeU2;
-}
+};
 
-function escapeU2(parser, c) {
+const escapeU2 = (parser, c) => {
 	if (c === null || !HEX.test(c)) {
 		throw parser.error("Expected hexadecimal digit");
 	}
 
 	parser.charCode |= parseInt(c, 16) << 8;
 	return escapeU3;
-}
+};
 
-function escapeU3(parser, c) {
+const escapeU3 = (parser, c) => {
 	if (c === null || !HEX.test(c)) {
 		throw parser.error("Expected hexadecimal digit");
 	}
 
 	parser.charCode |= parseInt(c, 16) << 4;
 	return escapeU4;
-}
+};
 
-function escapeU4(parser, c) {
+const escapeU4 = (parser, c) => {
 	if (c === null || !HEX.test(c)) {
 		throw parser.error("Expected hexadecimal digit");
 	}
 
-	var escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
+	const escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
 
 	parser.string.addText(parser.literalEscapeFunction, escapedCharacter);
 
 	return stringState;
-}
+};
 
-function extendedUnicodeEscapeState(parser, c) {
+const extendedUnicodeEscapeState = (parser, c) => {
 	if (c === "}") {
 		if (!parser.charHex) {
 			throw parser.error("Expected hexadecimal digit");
 		}
 
-		var codePoint = parseInt(parser.charHex, 16);
+		const codePoint = parseInt(parser.charHex, 16);
 
 		if (codePoint > 0x10ffff) {
 			throw parser.error("Undefined Unicode code-point");
 		}
 
-		var escapedCharacter = fromCodePoint(codePoint);
+		const escapedCharacter = String.fromCodePoint(codePoint);
 
 		parser.string.addText(parser.literalEscapeFunction, escapedCharacter);
 
@@ -786,10 +755,10 @@ function extendedUnicodeEscapeState(parser, c) {
 
 	parser.charHex += c;
 	return extendedUnicodeEscapeState;
-}
+};
 
-keywords = {
-	doctype: function (parser, c) {
+const keywords = {
+	doctype: (parser, c) => {
 		parser.context.children.push({
 			type: "string",
 			value: new CodeBlock().addText(null, "<!DOCTYPE html>"),
@@ -799,8 +768,8 @@ keywords = {
 
 		return contentState(parser, c);
 	},
-	include: function (parser, c) {
-		function leadingWhitespace(parser, c) {
+	include: (parser, c) => {
+		const leadingWhitespace = (parser, c) => {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -811,9 +780,9 @@ keywords = {
 			}
 
 			throw parser.error("Expected name of included template, not " + describeCharacter(c));
-		}
+		};
 
-		function identifier(parser, c) {
+		const identifier = (parser, c) => {
 			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
 				parser.context.children.push({
 					type: "include",
@@ -827,17 +796,17 @@ keywords = {
 
 			parser.identifier += c;
 			return identifier;
-		}
+		};
 
 		return leadingWhitespace(parser, c);
 	},
-	extends: function (parser, c) {
+	extends: (parser, c) => {
 		if (parser.root.children.length || parser.root.extends) {
 			throw parser.error("extends must appear first in a template", parser.identifierStart, parser.identifier.length);
 		}
 
 		parser.root.children = {
-			push: function (child) {
+			push: child => {
 				if (child.type === "element") {
 					throw parser.error("A child template can only contain block actions or macros at the root level", child.position, child.name.length);
 				} else {
@@ -848,7 +817,7 @@ keywords = {
 
 		parser.root.blockActions = Object.create(null);
 
-		function leadingWhitespace(parser, c) {
+		const leadingWhitespace = (parser, c) => {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -859,9 +828,9 @@ keywords = {
 			}
 
 			throw parser.error("Expected name of parent template, not " + describeCharacter(c));
-		}
+		};
 
-		function identifier(parser, c) {
+		const identifier = (parser, c) => {
 			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
 				parser.root.extends = parser.identifier;
 
@@ -870,14 +839,14 @@ keywords = {
 
 			parser.identifier += c;
 			return identifier;
-		}
+		};
 
 		return leadingWhitespace(parser, c);
 	},
-	block: function (parser, c) {
-		var blockStart = parser.identifierStart;
+	block: (parser, c) => {
+		const blockStart = parser.identifierStart;
 
-		function leadingWhitespace(parser, c) {
+		const leadingWhitespace = (parser, c) => {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -889,12 +858,12 @@ keywords = {
 			}
 
 			throw parser.error("Expected name of block, not " + describeCharacter(c));
-		}
+		};
 
-		function identifier(parser, c) {
+		const identifier = (parser, c) => {
 			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
 				if (parser.identifier in parser.root.blocks) {
-					var existingBlock = parser.root.blocks[parser.identifier];
+					const existingBlock = parser.root.blocks[parser.identifier];
 
 					throw parser.error(
 						"A block named “" + parser.identifier + "” has already been defined on line " + existingBlock.position.line,
@@ -920,11 +889,11 @@ keywords = {
 
 			parser.identifier += c;
 			return identifier;
-		}
+		};
 
 		return leadingWhitespace(parser, c);
 	},
-	replace: function (parser, c) {
+	replace: (parser, c) => {
 		if (!parser.root.extends) {
 			throw parser.error("Unexpected block replacement in a root template", parser.identifierStart, parser.identifier.length);
 		}
@@ -933,7 +902,7 @@ keywords = {
 			throw parser.error("Unexpected block replacement outside of root", parser.identifierStart, parser.identifier.length);
 		}
 
-		function leadingWhitespace(parser, c) {
+		const leadingWhitespace = (parser, c) => {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -944,11 +913,11 @@ keywords = {
 			}
 
 			throw parser.error("Expected name of block to replace, not " + describeCharacter(c));
-		}
+		};
 
-		function identifier(parser, c) {
+		const identifier = (parser, c) => {
 			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
-				var newBlock = {
+				const newBlock = {
 					type: "block",
 					name: parser.identifier,
 					parent: parser.context,
@@ -956,7 +925,7 @@ keywords = {
 					indent: parser.indent,
 				};
 
-				var action = function (block) {
+				const action = block => {
 					block.children = newBlock.children;
 				};
 
@@ -973,11 +942,11 @@ keywords = {
 
 			parser.identifier += c;
 			return identifier;
-		}
+		};
 
 		return leadingWhitespace(parser, c);
 	},
-	append: function (parser, c) {
+	append: (parser, c) => {
 		if (!parser.root.extends) {
 			throw parser.error("Unexpected block appension in a root template", parser.identifierStart, parser.identifier.length);
 		}
@@ -986,7 +955,7 @@ keywords = {
 			throw parser.error("Unexpected block appension outside of root", parser.identifierStart, parser.identifier.length);
 		}
 
-		function leadingWhitespace(parser, c) {
+		const leadingWhitespace = (parser, c) => {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -997,11 +966,11 @@ keywords = {
 			}
 
 			throw parser.error("Expected name of block to append to, not " + describeCharacter(c));
-		}
+		};
 
-		function identifier(parser, c) {
+		const identifier = (parser, c) => {
 			if (c === null || !BLOCK_OR_TEMPLATE_NAME.test(c)) {
-				var newBlock = {
+				const newBlock = {
 					type: "block",
 					name: parser.identifier,
 					parent: parser.context,
@@ -1009,8 +978,8 @@ keywords = {
 					indent: parser.indent,
 				};
 
-				var action = function (block) {
-					push.apply(block.children, newBlock.children);
+				const action = block => {
+					extend(block.children, newBlock.children);
 				};
 
 				if (parser.identifier in parser.root.blockActions) {
@@ -1026,14 +995,14 @@ keywords = {
 
 			parser.identifier += c;
 			return identifier;
-		}
+		};
 
 		return leadingWhitespace(parser, c);
 	},
-	if: function (parser, c) {
-		var condition_ = "";
+	if: (parser, c) => {
+		let condition_ = "";
 
-		function leadingWhitespace(parser, c) {
+		const leadingWhitespace = (parser, c) => {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -1043,9 +1012,9 @@ keywords = {
 			}
 
 			return condition(parser, c);
-		}
+		};
 
-		function condition(parser, c) {
+		const condition = (parser, c) => {
 			if (c === null || c === "\n") {
 				parser.context = {
 					type: "if",
@@ -1065,20 +1034,20 @@ keywords = {
 
 			condition_ += c;
 			return condition;
-		}
+		};
 
 		return leadingWhitespace(parser, c);
 	},
-	elif: function (parser, c) {
-		var condition_ = "";
+	elif: (parser, c) => {
+		let condition_ = "";
 
-		var previous = parser.context.children && parser.context.children[parser.context.children.length - 1];
+		const previous = parser.context.children && parser.context.children[parser.context.children.length - 1];
 
 		if (!previous || previous.type !== "if" || previous.else) {
 			throw parser.error("Unexpected elif", parser.identifierStart, parser.identifier.length);
 		}
 
-		function leadingWhitespace(parser, c) {
+		const leadingWhitespace = (parser, c) => {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -1088,11 +1057,11 @@ keywords = {
 			}
 
 			return condition(parser, c);
-		}
+		};
 
-		function condition(parser, c) {
+		const condition = (parser, c) => {
 			if (c === null || c === "\n") {
-				var elif = {
+				const elif = {
 					type: "elif",
 					condition: condition_,
 					parent: parser.context,
@@ -1109,12 +1078,12 @@ keywords = {
 
 			condition_ += c;
 			return condition;
-		}
+		};
 
 		return leadingWhitespace(parser, c);
 	},
-	else: function (parser, c) {
-		var previous = parser.context.children && parser.context.children[parser.context.children.length - 1];
+	else: (parser, c) => {
+		const previous = parser.context.children && parser.context.children[parser.context.children.length - 1];
 
 		if (!previous || previous.type !== "if" || previous.else) {
 			throw parser.error("Unexpected else", parser.identifierStart, parser.identifier.length);
@@ -1132,10 +1101,10 @@ keywords = {
 
 		return contentState(parser, c);
 	},
-	for: function (parser, c) {
-		var collection_ = "";
+	for: (parser, c) => {
+		let collection_ = "";
 
-		function leadingWhitespace(parser, c) {
+		const leadingWhitespace = (parser, c) => {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -1151,9 +1120,9 @@ keywords = {
 			}
 
 			throw parser.error("Expected name of loop variable, not " + describeCharacter(c));
-		}
+		};
 
-		function itemIdentifier(parser, c) {
+		const itemIdentifier = (parser, c) => {
 			if (c === " ") {
 				return whitespaceAfterItemIdentifier;
 			}
@@ -1169,9 +1138,9 @@ keywords = {
 
 			parser.itemIdentifier += c;
 			return itemIdentifier;
-		}
+		};
 
-		function whitespaceAfterItemIdentifier(parser, c) {
+		const whitespaceAfterItemIdentifier = (parser, c) => {
 			if (c === " ") {
 				return whitespaceAfterItemIdentifier;
 			}
@@ -1186,17 +1155,17 @@ keywords = {
 			}
 
 			throw parser.error("Expected of or comma");
-		}
+		};
 
-		function whitespaceBeforeIndexIdentifier(parser, c) {
+		const whitespaceBeforeIndexIdentifier = (parser, c) => {
 			if (c === " ") {
 				return whitespaceBeforeIndexIdentifier;
 			}
 
 			return indexIdentifier(parser, c);
-		}
+		};
 
-		function indexIdentifier(parser, c) {
+		const indexIdentifier = (parser, c) => {
 			if (c === " ") {
 				return whitespaceAfterIndexIdentifier;
 			}
@@ -1207,9 +1176,9 @@ keywords = {
 
 			parser.indexIdentifier += c;
 			return indexIdentifier;
-		}
+		};
 
-		function whitespaceAfterIndexIdentifier(parser, c) {
+		const whitespaceAfterIndexIdentifier = (parser, c) => {
 			if (c === " ") {
 				return whitespaceAfterIndexIdentifier;
 			}
@@ -1219,17 +1188,17 @@ keywords = {
 			}
 
 			throw parser.error("Expected of");
-		}
+		};
 
-		function of1(parser, c) {
+		const of1 = (parser, c) => {
 			if (c === "f") {
 				return of2;
 			}
 
 			throw parser.error("Expected of");
-		}
+		};
 
-		function of2(parser, c) {
+		const of2 = (parser, c) => {
 			if (c === null) {
 				throw parser.error("Expected loop collection expression");
 			}
@@ -1243,9 +1212,9 @@ keywords = {
 			}
 
 			return collection(parser, c);
-		}
+		};
 
-		function whitespace2(parser, c) {
+		const whitespace2 = (parser, c) => {
 			if (c === null) {
 				throw parser.error("Expected loop collection expression");
 			}
@@ -1255,9 +1224,9 @@ keywords = {
 			}
 
 			return collection(parser, c);
-		}
+		};
 
-		function collection(parser, c) {
+		const collection = (parser, c) => {
 			if (c === null || c === "\n") {
 				parser.context = {
 					type: "for",
@@ -1277,14 +1246,14 @@ keywords = {
 
 			collection_ += c;
 			return collection;
-		}
+		};
 
 		return leadingWhitespace(parser, c);
 	},
-	macro: function (parser, c) {
-		var macroStart = parser.identifierStart;
+	macro: (parser, c) => {
+		const macroStart = parser.identifierStart;
 
-		function leadingWhitespace(parser, c) {
+		const leadingWhitespace = (parser, c) => {
 			if (c === " ") {
 				return leadingWhitespace;
 			}
@@ -1296,15 +1265,15 @@ keywords = {
 			}
 
 			throw parser.error("Expected name of macro, not " + describeCharacter(c));
-		}
+		};
 
-		function identifier(parser, c) {
+		const identifier = (parser, c) => {
 			if (!isIdentifierCharacter(c)) {
-				if (parser.identifier in parser.root.macros) {
-					var existingMacro = parser.root.macros[parser.identifier];
+				const existingMacro = parser.root.macros.get(parser.identifier);
 
+				if (existingMacro !== undefined) {
 					throw parser.error(
-						"A macro named “" + parser.identifier + "” has already been defined on line " + existingMacro.position.line,
+						`A macro named “${parser.identifier}” has already been defined on line ${existingMacro.position.line}`,
 						parser.identifierStart,
 						parser.identifier.length
 					);
@@ -1320,16 +1289,16 @@ keywords = {
 					position: macroStart,
 				};
 
-				parser.root.macros[parser.identifier] = parser.context;
+				parser.root.macros.set(parser.identifier, parser.context);
 
 				return contentOrParameterList(parser, c);
 			}
 
 			parser.identifier += c;
 			return identifier;
-		}
+		};
 
-		function contentOrParameterList(parser, c) {
+		const contentOrParameterList = (parser, c) => {
 			if (c === " ") {
 				return contentOrParameterList;
 			}
@@ -1340,9 +1309,9 @@ keywords = {
 			}
 
 			return contentState(parser, c);
-		}
+		};
 
-		function beforeParameterName(parser, c) {
+		const beforeParameterName = (parser, c) => {
 			if (c === " ") {
 				return beforeParameterName;
 			}
@@ -1362,20 +1331,20 @@ keywords = {
 			parser.identifier = "";
 			parser.identifierStart = parser.getPosition();
 			return parameterName(parser, c);
-		}
+		};
 
-		function parameterName(parser, c) {
+		const parameterName = (parser, c) => {
 			if (c === null) {
 				throw parser.error("Unclosed macro parameter list", parser.macroParameterListStart);
 			}
 
 			if (c === ")" || c === "," || c === " ") {
-				if (parser.context.parameters.indexOf(parser.identifier) !== -1) {
-					throw parser.error("Parameter “" + parser.identifier + "” already specified", parser.identifierStart, parser.identifier.length);
+				if (parser.context.parameters.includes(parser.identifier)) {
+					throw parser.error(`Parameter “${parser.identifier}” already specified`, parser.identifierStart, parser.identifier.length);
 				}
 
 				if (JS_RESERVED_WORDS.has(parser.identifier)) {
-					throw parser.error("Parameter name “" + parser.identifier + "” is reserved word", parser.identifierStart, parser.identifier.length);
+					throw parser.error(`Parameter name “${parser.identifier}” is reserved word`, parser.identifierStart, parser.identifier.length);
 				}
 
 				parser.context.parameters.push(parser.identifier);
@@ -1388,9 +1357,9 @@ keywords = {
 
 			parser.identifier += c;
 			return parameterName;
-		}
+		};
 
-		function afterParameterName(parser, c) {
+		const afterParameterName = (parser, c) => {
 			if (c === " ") {
 				return afterParameterName;
 			}
@@ -1408,11 +1377,11 @@ keywords = {
 			}
 
 			throw parser.error("Unexpected " + describeCharacter(c));
-		}
+		};
 
 		return leadingWhitespace(parser, c);
 	},
-	yield: function (parser, c) {
+	yield: (parser, c) => {
 		parser.context.children.push({
 			type: "yield",
 			parent: parser.context,
@@ -1422,7 +1391,7 @@ keywords = {
 
 		return contentState(parser, c);
 	},
-	do: function (parser, c) {
+	do: (parser, c) => {
 		parser.context = {
 			type: "code",
 			code: "",
@@ -1437,69 +1406,64 @@ keywords = {
 	},
 };
 
-function parse(template, options) {
-	var i;
-
-	var root = {
+const parse = (template, options) => {
+	const root = {
 		type: "root",
 		children: [],
 		indent: -1,
 		extends: null,
 		blockActions: null,
 		blocks: Object.create(null),
-		macros: Object.create(null),
+		macros: new Map(),
 	};
 
-	var position = {
+	const position = {
 		line: 1,
 		character: 1,
 		index: 0,
 	};
 
-	function TemplateError(message, source) {
-		Object.defineProperty(this, "message", {
-			configurable: true,
-			writable: true,
-			value: message,
-		});
+	class TemplateError extends SyntaxError {
+		constructor(message, source) {
+			super(message);
 
-		Object.defineProperty(this, "position", {
-			configurable: true,
-			writable: true,
-			value: source.position,
-		});
+			Object.defineProperty(this, "message", {
+				configurable: true,
+				writable: true,
+				value: message,
+			});
 
-		Object.defineProperty(this, "context", {
-			configurable: true,
-			writable: true,
-			value: source.context,
-		});
+			Object.defineProperty(this, "position", {
+				configurable: true,
+				writable: true,
+				value: source.position,
+			});
 
-		Error.captureStackTrace(this, this.constructor);
+			Object.defineProperty(this, "context", {
+				configurable: true,
+				writable: true,
+				value: source.context,
+			});
 
-		var stackInsert = "    at template (" + source.name + ":" + source.position.line + ":" + source.position.character + ")";
+			Error.captureStackTrace(this, this.constructor);
 
-		Object.defineProperty(this, "stack", {
-			configurable: true,
-			writable: true,
-			value: this.context + "\n" + this.stack.replace("\n", "\n" + stackInsert + "\n"),
-		});
+			const stackInsert = "    at template (" + source.name + ":" + source.position.line + ":" + source.position.character + ")";
+
+			Object.defineProperty(this, "stack", {
+				configurable: true,
+				writable: true,
+				value: this.context + "\n" + this.stack.replace("\n", "\n" + stackInsert + "\n"),
+			});
+		}
 	}
 
-	TemplateError.prototype = Object.create(SyntaxError.prototype, {
-		constructor: {
-			configurable: true,
-			writable: true,
-			value: TemplateError,
-		},
-		name: {
-			configurable: true,
-			writable: true,
-			value: TemplateError.name,
-		},
+	Object.defineProperty(TemplateError.prototype, "name", {
+		configurable: true,
+		writable: true,
+		value: TemplateError.name,
 	});
 
-	var parser = Object.seal({
+	const parser = Object.seal({
 		context: root,
 		root: root,
 		indentString: "",
@@ -1526,47 +1490,37 @@ function parse(template, options) {
 		macroCallParameterStart: null,
 		badMacroCallParameters: null,
 		macroParameterListStart: null,
-		getPosition: function () {
-			return {
-				line: position.line,
-				character: position.character,
-				index: position.index,
-			};
+		getPosition: () => {
+			const { line, character, index } = position;
+			return { line, character, index };
 		},
-		error: function (message, displayPosition, extent) {
-			var where = displayPosition || position;
-			var defaultExtent = isLeadingSurrogate(template.charCodeAt(where)) ? 2 : 1;
+		error: (message, displayPosition = position, extent) => {
+			const defaultExtent = isLeadingSurrogate(template.charCodeAt(displayPosition)) ? 2 : 1;
 
 			return new TemplateError(message, {
-				position: where,
+				position: displayPosition,
 				name: options.name,
-				context: getContext(template, where, extent || defaultExtent),
+				context: getContext(template, displayPosition, extent || defaultExtent),
 			});
 		},
 	});
 
-	function getContext(template, position, extent) {
-		var numberWidth = (Math.log10(position.line) | 0) + 2;
+	const getContext = (template, position, extent) => {
+		const numberWidth = (Math.log10(position.line) | 0) + 2;
 
-		function padLeft(s, width) {
-			return s.length < width ?
-				" ".repeat(width - s.length) + s :
-				s;
-		}
-
-		function formatLine(number, line, highlight) {
-			var highlightStart = highlight && highlight.start;
-			var highlightExtent = highlight && highlight.extent;
+		const formatLine = (number, line, highlight) => {
+			let highlightStart = highlight && highlight.start;
+			let highlightExtent = highlight && highlight.extent;
 
 			if (highlight && highlightExtent < 0) {
 				highlightStart += highlightExtent;
 				highlightExtent *= -1;
 			}
 
-			var formattedNumber = padLeft(String(number), numberWidth);
-			var formattedLine =
+			const formattedNumber = String(number).padStart(numberWidth);
+			const formattedLine =
 				line
-					.replace(/^\t+/, function (match) {
+					.replace(/^\t+/, match => {
 						if (highlight) {
 							if (highlightStart < match.length) {
 								highlightStart *= 4;
@@ -1581,7 +1535,7 @@ function parse(template, options) {
 					.replace(/\t/g, "⇥");
 
 			if (highlight) {
-				for (var i = 0; i < highlightStart; i++) {
+				for (let i = 0; i < highlightStart; i++) {
 					if (isLeadingSurrogate(formattedLine.charCodeAt(i))) {
 						highlightStart++;
 						i++;
@@ -1594,119 +1548,111 @@ function parse(template, options) {
 					formattedLine.substr(0, highlightStart) + "\x1b[41;37m" + formattedLine.substr(highlightStart, highlightExtent) + "\x1b[0m" + formattedLine.substr(highlightStart + highlightExtent) :
 					formattedLine
 			);
-		}
+		};
 
-		var lines = template.split(/\r\n|[\r\n]/);
+		const lines = template.split(/\r\n|[\r\n]/);
 
 		if (lines[lines.length - 1] === "") {
 			lines.pop();
 		}
 
-		var positionLine = position.line;
-		var positionCharacter = position.character;
+		let positionLine = position.line;
+		let positionCharacter = position.character;
 
 		if (position.character === 0) {
 			positionLine--;
 			positionCharacter = lines[positionLine - 1].length + 1;
 		}
 
-		var output = "";
-		var lowerBound = Math.max(0, positionLine - 3);
-		var upperBound = Math.min(lines.length, positionLine + 2);
-		var i;
+		let output = "";
+		const lowerBound = Math.max(0, positionLine - 3);
+		const upperBound = Math.min(lines.length, positionLine + 2);
 
-		for (i = lowerBound; i < positionLine - 1; i++) {
+		for (let i = lowerBound; i < positionLine - 1; i++) {
 			output += "\x1b[38;5;245m" + formatLine(i + 1, lines[i]) + "\x1b[0m\n";
 		}
 
-		var highlight = {
+		const highlight = {
 			start: positionCharacter - 1,
 			extent: extent,
 		};
 
 		output += formatLine(positionLine, lines[positionLine - 1], highlight) + "\n";
 
-		for (i = positionLine; i < upperBound; i++) {
+		for (let i = positionLine; i < upperBound; i++) {
 			output += "\x1b[38;5;245m" + formatLine(i + 1, lines[i]) + "\x1b[0m\n";
 		}
 
 		return output;
-	}
+	};
 
-	var state = indentState;
+	let state = indentState;
+	let cr = false;
 
-	for (i = 0; i < template.length; i++) {
-		var c = template.charAt(i);
+	for (let c of template) {
+		if (cr) {
+			cr = false;
 
-		if (c === "\n" || c === "\r") {
-			position.line++;
-			position.character = 0;
-
-			if (c === "\r" && template.charAt(i + 1) === "\n") {
-				i++;
+			if (c !== "\n") {
+				throw parser.error("Expected LF after CR");
 			}
 
-			c = "\n";
+			position.index++;
+			continue;
 		}
 
-		var code = template.charCodeAt(i);
-
-		if (isLeadingSurrogate(code)) {
-			var nextCode = template.charCodeAt(i + 1);
-
-			if (nextCode >= 0xdc00 && nextCode <= 0xdfff) {
-				c += template.charAt(i + 1);
-				i++;
-			}
+		if (c === "\n" || (cr = c === "\r")) {
+			position.line++;
+			position.character = 0;
+			c = "\n";
 		}
 
 		state = state(parser, c);
 		position.character++;
-		position.index = i;
+		position.index += c.length;
 	}
 
 	state(parser, null);
 
 	if (root.extends) {
-		var parentTemplate = options.load(root.extends);
-		var blockName;
+		const parentTemplate = options.load(root.extends);
 
-		for (blockName in root.blocks) {
+		for (const blockName in root.blocks) {
 			if (blockName in parentTemplate.blocks) {
-				throw new SyntaxError("Parent template " + root.extends + " already contains a block named “" + blockName + "”.");
+				throw new SyntaxError(`Parent template ${root.extends} already contains a block named “${blockName}”.`);
 			}
 
 			parentTemplate.blocks[blockName] = root.blocks[blockName];
 		}
 
-		for (blockName in root.blockActions) {
+		for (const blockName in root.blockActions) {
 			if (!(blockName in parentTemplate.blocks)) {
-				throw new SyntaxError("There is no block named “" + blockName + "”.");
+				throw new SyntaxError(`There is no block named “${blockName}”.`);
 			}
 
-			var block = parentTemplate.blocks[blockName];
-			var actions = root.blockActions[blockName];
+			const block = parentTemplate.blocks[blockName];
+			const actions = root.blockActions[blockName];
 
-			for (i = 0; i < actions.length; i++) {
-				var action = actions[i];
-
+			for (const action of actions) {
 				action(block);
 			}
 		}
 
-		for (var macroName in root.macros) {
-			if (macroName in parentTemplate.macros) {
-				throw new SyntaxError("Parent template " + root.extends + " already contains a macro named “" + macroName + "”.");
+		for (const [macroName, macro] of root.macros) {
+			if (parentTemplate.macros.has(macroName)) {
+				throw new SyntaxError(`Parent template ${root.extends} already contains a macro named “${macroName}”.`);
 			}
 
-			parentTemplate.macros[macroName] = root.macros[macroName];
+			parentTemplate.macros.set(macroName, macro);
 		}
 
 		return parentTemplate;
 	}
 
 	return root;
-}
+};
 
-exports.parse = parse;
-exports.keywords = keywords;
+module.exports = {
+	parse,
+	keywords,
+};

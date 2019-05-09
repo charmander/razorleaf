@@ -12,7 +12,7 @@ function Markup(parts) {
 	return Markup.unsafe(parts[0]);
 }
 
-Markup.unsafe = function (html) {
+const unsafe = html => {
 	if (typeof html !== "string") {
 		throw new TypeError("HTML passed to Markup.unsafe must be a string");
 	}
@@ -25,12 +25,25 @@ Markup.unsafe = function (html) {
 	});
 };
 
-Markup.unwrap = function (markup) {
+const unwrap = markup => {
 	if (!(markup instanceof Markup)) {
 		throw new TypeError("Unescaped content must be an instance of Markup");
 	}
 
 	return markup._html;
 };
+
+Object.defineProperties(Markup, {
+	unsafe: {
+		configurable: true,
+		writable: true,
+		value: unsafe,
+	},
+	unwrap: {
+		configurable: true,
+		writable: true,
+		value: unwrap,
+	},
+});
 
 module.exports = Markup;
