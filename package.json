@@ -3,11 +3,14 @@
 	"version": "5.3.2",
 	"files": [
 		"index.js",
+		"cli.js",
 		"compiler.js",
-		"parser.js",
-		"utilities.js",
 		"directory-loader.js",
-		"cli.js"
+		"escapes.js",
+		"markup.js",
+		"parser.js",
+		"internal/code-block.js",
+		"internal/void-tags.js"
 	],
 	"bin": "cli.js",
 	"description": "A template engine for HTML",

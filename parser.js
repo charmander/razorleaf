@@ -1,8 +1,8 @@
 /* eslint-disable no-shadow */
 "use strict";
 
-var utilities = require("./utilities");
-var CodeBlock = utilities.CodeBlock;
+var CodeBlock = require("./internal/code-block");
+var escapes = require("./escapes");
 var push = Array.prototype.push;
 
 var HEX = /[\da-fA-F]/;
@@ -174,7 +174,7 @@ function indentState(parser, c) {
 		}
 
 		if (parser.indent > parser.context.indent + 1) {
-			if (parser.context.type === "code" && parser.context.isCodeBlock) {
+			if (parser.context.type === "code") {
 				var unitsPerLevel =
 					parser.indentType.indentCharacter === "\t" ?
 						1 :
@@ -217,7 +217,7 @@ function contentState(parser, c) {
 		return indentState;
 	}
 
-	if (parser.context.type === "code" && parser.context.isCodeBlock) {
+	if (parser.context.type === "code") {
 		return codeBlockState(parser, c);
 	}
 
@@ -243,11 +243,11 @@ function contentState(parser, c) {
 		parser.string = new CodeBlock();
 
 		if (parser.context.type === "attribute") {
-			parser.escapeFunction = "escapeAttributeValue";
-			parser.literalEscapeFunction = utilities.escapeAttributeValue;
+			parser.escapeFunction = "escapeDoubleQuotedAttributeValue";
+			parser.literalEscapeFunction = escapes.escapeDoubleQuotedAttributeValue;
 		} else {
 			parser.escapeFunction = "escapeContent";
-			parser.literalEscapeFunction = utilities.escapeContent;
+			parser.literalEscapeFunction = escapes.escapeContent;
 		}
 
 		parser.stringStart = parser.getPosition();
@@ -256,11 +256,6 @@ function contentState(parser, c) {
 
 	if (c === "#") {
 		return commentState;
-	}
-
-	if (c === "%") {
-		parser.code = "";
-		return codeState;
 	}
 
 	if (isIdentifierCharacter(c)) {
@@ -278,27 +273,6 @@ function commentState(parser, c) {
 	}
 
 	return commentState;
-}
-
-function codeState(parser, c) {
-	if (c === null || c === "\n") {
-		parser.context = {
-			type: "code",
-			isCodeBlock: false,
-			code: parser.code.trim(),
-			parent: parser.context,
-			children: [],
-			indent: parser.indent,
-			position: parser.getPosition(),
-		};
-
-		parser.context.parent.children.push(parser.context);
-
-		return contentState(parser, c);
-	}
-
-	parser.code += c;
-	return codeState;
 }
 
 function codeBlockState(parser, c) {
@@ -387,9 +361,73 @@ function possibleAttributeState(parser, c) {
 		position: parser.getPosition(),
 	};
 
-	parser.context.parent.children.push(parser.context);
+	return afterAttributeNameState(parser, c);
+}
 
-	return contentState(parser, c);
+function afterAttributeNameState(parser, c) {
+	if (c === " ") {
+		return afterAttributeNameState;
+	}
+
+	if (c === "\"") {
+		parser.context.parent.children.push(parser.context);
+
+		return contentState(parser, c);
+	}
+
+	if (c === "i") {
+		parser.identifierStart = parser.getPosition();
+
+		return attributeIf0State;
+	}
+
+	throw parser.error("Expected attribute value or “if”");
+}
+
+function attributeIf0State(parser, c) {
+	if (c === "f") {
+		return attributeIf1State;
+	}
+
+	throw parser.error("Expected attribute value or “if”", parser.identifierStart);
+}
+
+function attributeIf1State(parser, c) {
+	if (c === " ") {
+		parser.context = {
+			type: "if",
+			condition: "",
+			elif: [],
+			else: null,
+			parent: parser.context.parent,
+			children: [parser.context],
+			indent: parser.indent,
+			position: parser.getPosition(),
+		};
+
+		parser.context.parent.children.push(parser.context);
+
+		return attributeConditionSpaceState;
+	}
+
+	throw parser.error("Expected attribute value or “if”", parser.identifierStart);
+}
+
+function attributeConditionSpaceState(parser, c) {
+	if (c === " ") {
+		return attributeConditionSpaceState;
+	}
+
+	return attributeConditionState(parser, c);
+}
+
+function attributeConditionState(parser, c) {
+	if (c === null || c === "\n") {
+		return contentState(parser, c);
+	}
+
+	parser.context.condition += c;
+	return attributeConditionState;
 }
 
 function macroCallState(parser, c) {
@@ -592,11 +630,7 @@ function stringState(parser, c) {
 		return escapeState;
 	}
 
-	if (parser.literalEscapeFunction === null) {
-		parser.string.addText(c);
-	} else {
-		parser.string.addText(parser.literalEscapeFunction(c));
-	}
+	parser.string.addText(parser.literalEscapeFunction, c);
 
 	return stringState;
 }
@@ -609,7 +643,7 @@ function stringPoundState(parser, c) {
 		return interpolationState;
 	}
 
-	parser.string.addText("#");
+	parser.string.addText(parser.literalEscapeFunction, "#");
 	return stringState(parser, c);
 }
 
@@ -643,7 +677,7 @@ function interpolationState(parser, c) {
 
 function escapeState(parser, c) {
 	if (c === "#" || c === '"') {
-		parser.string.addText(c);
+		parser.string.addText(parser.literalEscapeFunction, c);
 		return stringState;
 	}
 
@@ -656,7 +690,7 @@ function escapeState(parser, c) {
 	}
 
 	if (c in singleCharEscapes) {
-		parser.string.addText(singleCharEscapes[c]);
+		parser.string.addText(parser.literalEscapeFunction, singleCharEscapes[c]);
 		return stringState;
 	}
 
@@ -679,11 +713,7 @@ function escapeX2(parser, c) {
 
 	var escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
 
-	if (parser.escapeFunction) {
-		parser.string.addText(utilities[parser.escapeFunction](escapedCharacter));
-	} else {
-		parser.string.addText(escapedCharacter);
-	}
+	parser.string.addText(parser.literalEscapeFunction, escapedCharacter);
 
 	return stringState;
 }
@@ -726,11 +756,7 @@ function escapeU4(parser, c) {
 
 	var escapedCharacter = String.fromCharCode(parser.charCode | parseInt(c, 16));
 
-	if (parser.escapeFunction) {
-		parser.string.addText(utilities[parser.escapeFunction](escapedCharacter));
-	} else {
-		parser.string.addText(escapedCharacter);
-	}
+	parser.string.addText(parser.literalEscapeFunction, escapedCharacter);
 
 	return stringState;
 }
@@ -749,11 +775,7 @@ function extendedUnicodeEscapeState(parser, c) {
 
 		var escapedCharacter = fromCodePoint(codePoint);
 
-		if (parser.escapeFunction) {
-			parser.string.addText(utilities[parser.escapeFunction](escapedCharacter));
-		} else {
-			parser.string.addText(escapedCharacter);
-		}
+		parser.string.addText(parser.literalEscapeFunction, escapedCharacter);
 
 		return stringState;
 	}
@@ -770,7 +792,7 @@ keywords = {
 	doctype: function (parser, c) {
 		parser.context.children.push({
 			type: "string",
-			value: new CodeBlock().addText("<!DOCTYPE html>"),
+			value: new CodeBlock().addText(null, "<!DOCTYPE html>"),
 			parent: parser.context,
 			position: parser.getPosition(),
 		});
@@ -1403,7 +1425,6 @@ keywords = {
 	do: function (parser, c) {
 		parser.context = {
 			type: "code",
-			isCodeBlock: true,
 			code: "",
 			parent: parser.context,
 			indent: parser.indent,

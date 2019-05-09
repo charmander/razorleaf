@@ -1,7 +1,9 @@
 "use strict";
 
-var utilities = require("./utilities");
-var CodeBlock = utilities.CodeBlock;
+var CodeBlock = require("./internal/code-block");
+var voidTags = require("./internal/void-tags");
+var escapes = require("./escapes");
+var Markup = require("./markup");
 
 var POSSIBLE_COMMENT = /\/\/|<!--/;
 
@@ -72,8 +74,6 @@ var RESERVED_WORDS = [
 	"eval",
 ];
 
-var voidTags = utilities.voidTags;
-
 function parseIdentifierEscape(match, identifierEscape) {
 	return String.fromCharCode(parseInt(identifierEscape, 16));
 }
@@ -89,6 +89,37 @@ function isIdentifier(text) {
 
 function wrapExpression(expression) {
 	return POSSIBLE_COMMENT.test(expression) ? expression + "\n" : expression;
+}
+
+function count(text, c) {
+	var result = 0;
+	var i = -1;
+
+	while ((i = text.indexOf(c, i + 1)) !== -1) {
+		result++;
+	}
+
+	return result;
+}
+
+function shortestAttributeRepresentation(attributeValue) {
+	if (typeof attributeValue !== "string") {
+		throw new TypeError("Attribute value must be a string");
+	}
+
+	if (attributeValue === "") {
+		return "";
+	}
+
+	attributeValue = attributeValue.replace(/&(?=#|[0-9A-Za-z]+;)/g, "&amp;");
+
+	if (!/[\t\n\f\r "'=<>`]/.test(attributeValue)) {
+		return "=" + attributeValue;
+	}
+
+	return count(attributeValue, '"') > count(attributeValue, '"') ?
+		"='" + attributeValue.replace(/'/g, "&#39;") + "'" :
+		'="' + attributeValue.replace(/"/g, "&#34;") + '"';
 }
 
 function addPossibleConflicts(possibleConflicts, code) {
@@ -198,7 +229,7 @@ var transform = {
 		var isVoid = voidTags.indexOf(name) !== -1;
 
 		var newContext = {
-			attributes: new CodeBlock().addText("<" + name),
+			attributes: new CodeBlock().addText(null, "<" + name),
 			content: !isVoid && new CodeBlock(),
 			classes: new CodeBlock(),
 		};
@@ -219,17 +250,23 @@ var transform = {
 				}
 			}
 
-			context.content.addText(" class=\"");
-			context.content.addBlock(newContext.classes);
-			context.content.addText("\"");
+			var classText = newContext.classes.toTextOrNull(null);
+
+			if (classText === null) {
+				context.content.addText(null, " class=\"");
+				context.content.addBlock(newContext.classes);
+				context.content.addText(null, "\"");
+			} else {
+				context.content.addText(null, " class" + shortestAttributeRepresentation(classText));
+			}
 		}
 
-		context.content.addText(">");
+		context.content.addText(null, ">");
 
 		context.content.addBlock(newContext.content);
 
 		if (!isVoid) {
-			context.content.addText("</" + name + ">");
+			context.content.addText(null, "</" + name + ">");
 		}
 	},
 	attribute: function (compiler, context, node) {
@@ -237,12 +274,18 @@ var transform = {
 			throw node.unexpected;
 		}
 
-		context.attributes.addText(" " + node.name);
+		context.attributes.addText(null, " " + node.name);
 
-		if (node.value) {
-			context.attributes.addText("=\"");
-			context.attributes.addBlock(node.value.value);
-			context.attributes.addText("\"");
+		if (node.value !== null && node.value.value.parts.length !== 0) {
+			var text = node.value.value.toTextOrNull(escapes.escapeDoubleQuotedAttributeValue);
+
+			if (text === null) {
+				context.attributes.addText(null, "=\"");
+				context.attributes.addBlock(node.value.value);
+				context.attributes.addText(null, "\"");
+			} else {
+				context.attributes.addText(null, shortestAttributeRepresentation(text));
+			}
 
 			for (var i = 0; i < node.value.value.parts.length; i++) {
 				var part = node.value.value.parts[i];
@@ -273,24 +316,10 @@ var transform = {
 			throw node.unexpected;
 		}
 
-		context.classes.addText(" " + node.value);
+		context.classes.addText(null, " " + node.value);
 	},
 	code: function (compiler, context, node) {
-		if (!node.isCodeBlock && node.children.length) {
-			context.content.addCode(wrapExpression(node.code) + " {");
-
-			var newContext = {
-				content: context.content,
-			};
-
-			node.children.forEach(function (child) {
-				compileNode(compiler, newContext, child);
-			});
-
-			context.content.addCode("}");
-		} else {
-			context.content.addCode(wrapExpression(node.code) + ";");
-		}
+		context.content.addCode(wrapExpression(node.code) + ";");
 
 		addPossibleConflicts(compiler.possibleConflicts, node.code);
 	},
@@ -625,14 +654,14 @@ function compile(tree, options) {
 	}
 
 	return new Function(
-		"escapeAttributeValue, escapeContent, unwrapMarkup, globals",
+		"escapeDoubleQuotedAttributeValue, escapeContent, unwrapMarkup, globals",
 		"'use strict';\n" +
 		globalUnpack +
 		"return function template(data) {\n" + code + "\n};"
 	)(
-		utilities.escapeAttributeValue,
-		utilities.escapeContent,
-		utilities.unwrapMarkup,
+		escapes.escapeDoubleQuotedAttributeValue,
+		escapes.escapeContent,
+		Markup.unwrap,
 		options.globals
 	);
 }

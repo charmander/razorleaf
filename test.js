@@ -1,6 +1,7 @@
 "use strict";
 
 var razorleaf = require("./");
+var Markup = require("./markup");
 var parser = require("./parser");
 
 var PARSER_ERROR_MESSAGE = /^(.+) at line \d+, character \d+ in <Razor Leaf template>/;
@@ -35,7 +36,7 @@ var tests = [
 		name: "unescaped expression",
 		template: '!"#{data.unsafe}"',
 		data: {
-			unsafe: razorleaf.Markup.unsafe("<b>unsafe</b>"),
+			unsafe: Markup.unsafe("<b>unsafe</b>"),
 		},
 		expected: { output: "<b>unsafe</b>" },
 	},
@@ -61,24 +62,24 @@ var tests = [
 	},
 	{
 		name: "comment after boolean attribute",
-		template: "div\n\tdata-test:\n\t# comment",
+		template: "div\n\tdata-test: \"\"\n\t# comment",
 		expected: { output: "<div data-test></div>" },
 	},
 	{
 		name: "non-conflicting output variable",
-		template: '% var output;\n"#{typeof output}"',
+		template: 'do var output;\n"#{typeof output}"',
 		expected: { output: "undefined" },
 	},
 	{
 		name: "non-conflicting output variable with escaped references",
-		template: '% var \\u006futput;\n"#{typeof \\u006futput}"',
+		template: 'do var \\u006futput;\n"#{typeof \\u006futput}"',
 		expected: { output: "undefined" },
 	},
 	{
 		name: "including attributes",
 		template: "script include async",
 		include: {
-			async: "async:",
+			async: 'async: ""',
 		},
 		expected: { output: "<script async></script>" },
 	},
@@ -90,13 +91,13 @@ var tests = [
 	},
 	{
 		name: "reordering of mixed conditionals",
-		template: '% var x = true;\ndiv "Hello, world!" \n\tif x\n\t\t"#{data.example}"\n\tif x = false\n\t\tdata-fail: "true"',
+		template: 'do var x = true;\ndiv "Hello, world!" \n\tif x\n\t\t"#{data.example}"\n\tif x = false\n\t\tdata-fail: "true"',
 		data: { example: "example" },
 		expected: { output: "<div>Hello, world!example</div>" },
 	},
 	{
 		name: "nested conditionals",
-		template: 'div if true\n\tif 1\n\t\t"Good" data-example:',
+		template: 'div if true\n\tif 1\n\t\t"Good" data-example: ""',
 		expected: { output: "<div data-example>Good</div>" },
 	},
 	{
@@ -148,7 +149,7 @@ var tests = [
 	{
 		name: "attributes in else after content in if",
 		template: 'div\n\tif false\n\t\t"fail"\n\telse\n\t\tdata-status: "pass"',
-		expected: { output: '<div data-status="pass"></div>' },
+		expected: { output: "<div data-status=pass></div>" },
 	},
 	{
 		name: "elif inside element",
@@ -172,7 +173,7 @@ var tests = [
 	},
 	{
 		name: "hasOwnProperty as a variable name",
-		template: '% var hasOwnProperty;\nfor x of [1, 2, 3]\n\t"#{x}"',
+		template: 'do var hasOwnProperty;\nfor x of [1, 2, 3]\n\t"#{x}"',
 		expected: { output: "123" },
 	},
 	{
@@ -189,7 +190,7 @@ var tests = [
 		include: {
 			layout: "body\n\tblock content\n\t\t.test-fail",
 		},
-		expected: { output: '<body class="test-pass"></body>' },
+		expected: { output: "<body class=test-pass></body>" },
 	},
 	{
 		name: "extended Unicode escape",
@@ -231,7 +232,7 @@ var tests = [
 	},
 	{
 		name: "macros with conflicting variable names",
-		template: '% var x = 5;\nmacro test(x)\n\t"#{x},"\ntest(12)\n"#{x}"',
+		template: 'do var x = 5;\nmacro test(x)\n\t"#{x},"\ntest(12)\n"#{x}"',
 		expected: { output: "12,5" },
 	},
 	{
@@ -251,7 +252,7 @@ var tests = [
 	},
 	{
 		name: "macro with conflicting variable name in void element context",
-		template: "% var x = 5;\nmacro test(x)\nimg test(12)",
+		template: "do var x = 5;\nmacro test(x)\nimg test(12)",
 		expected: { output: "<img>" },
 	},
 	{
@@ -266,8 +267,34 @@ var tests = [
 	},
 	{
 		name: "code blocks with first indentation in template",
-		template: "% let x;\ndo\n\tif (true)\n\t\tx = 5;\n\n\"#{x}\"",
+		template: "do let x;\ndo\n\tif (true)\n\t\tx = 5;\n\n\"#{x}\"",
 		expected: { output: "5" },
+	},
+	{
+		name: "boolean attributes",
+		template: "input disabled: \"\"",
+		expected: { output: "<input disabled>" },
+	},
+	{
+		name: "conditional boolean attribute shorthand",
+		template: "button disabled: if true\nbutton disabled: if false",
+		expected: { output: "<button disabled></button><button></button>" },
+	},
+	{
+		name: "attribute split across multiple lines incorrectly",
+		template: 'html\n\tlang:\n\t"fr"',
+		expected: { error: "Expected attribute value or “if”" },
+	},
+	{
+		name: "content `if` blocks after code",
+		template: 'div\n\tdo const x = 5;\n\tif x === 5\n\t\t"pass"',
+		expected: { output: "<div>pass</div>" },
+	},
+	{
+		name: "attribute `if` blocks after code",
+		template: 'div\n\tdo const x = 5;\n\tif x === 5\n\t\tdata-pass: ""',
+		expected: { output: "<div data-pass></div>" },
+		options: { debug: true },
 	},
 ];
 
