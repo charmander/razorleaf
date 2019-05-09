@@ -36,7 +36,7 @@ doctype html
     body
         h1 "Hello, world!"
 
-        % const { left, right } = data;
+        do const { left, right } = data;
         p "#{left} × #{right} = #{left * right}"
 ```
 
@@ -222,7 +222,7 @@ do
 
     let characterCount = 0;
 
-for post in sorted(posts, post => post.title)
+for post of sorted(posts, post => post.title)
     post-detail(post)
     do characterCount += post.content.length;
 ```
