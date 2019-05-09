@@ -609,10 +609,6 @@ function compile(tree, options) {
 		"var " + outputVariable + " = '" + context.content.toCode(outputVariable, "text") +
 		"\n\nreturn " + outputVariable + ";";
 
-	if (options.debug) {
-		console.error(code);
-	}
-
 	var globalUnpack = "";
 
 	if (options.globals !== undefined) {

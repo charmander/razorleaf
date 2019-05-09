@@ -272,7 +272,6 @@ one argument, `data`, which can be used (under that name) in the template.
 
 ### Options
 
-- **`debug`**: If `true`, warnings will be printed. (In a later version, this will enable error rewriting.)
 - **`load(name)`**: A function that returns a parsed template represented by `name`. This is filled automatically by most loaders.
 - **`globals`**: An object representing the global variables that should be made available to the template.
 

@@ -121,16 +121,11 @@ function describeList(list, maxLength) {
 }
 
 function indentState(parser, c) {
-	if (c === null && parser.indentString) {
-		parser.warn("Trailing whitespace");
+	if (c === null) {
 		return null;
 	}
 
 	if (c === "\n") {
-		if (parser.indentString) {
-			parser.warn("Whitespace-only line");
-		}
-
 		parser.indentString = "";
 		return indentState;
 	}
@@ -1532,14 +1527,6 @@ function parse(template, options) {
 				name: options.name,
 				context: getContext(template, where, extent || defaultExtent),
 			});
-		},
-		warn: function (message, displayPosition) {
-			if (!options.debug) {
-				return;
-			}
-
-			var where = describePosition(displayPosition || position);
-			console.warn("⚠ %s at %s in %s.", message, where, options.name);
 		},
 	});
 

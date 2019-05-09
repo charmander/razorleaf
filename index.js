@@ -21,7 +21,6 @@ function combine() {
 }
 
 var defaults = {
-	debug: false,
 	name: "<Razor Leaf template>",
 };
 
