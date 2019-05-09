@@ -1,9 +1,8 @@
 language: node_js
 node_js:
-  - "4"
-  - "6"
   - "8"
   - "10"
+  - "12"
 before_script:
   - tmp=$(mktemp --directory)
   - bash -O dotglob -O extglob -c 'mv !(node_modules|test.js) "$1"/' bash "$tmp"
