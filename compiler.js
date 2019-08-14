@@ -124,11 +124,13 @@ const unescapeIdentifier = source =>
 	source.replace(/\\u([0-9a-fA-F]{4})|\\u\{([0-9a-fA-F]+)\}/g, (_, hex4, hexAny) =>
 		String.fromCodePoint(parseInt(hex4 || hexAny, 16)));
 
+/**
+ * Finds names that might be referenced by template code and so should be avoided when generating ones for compiler use.
+ *
+ * Will generally include many false positives, but false negatives shouldn’t be possible unless `eval` is involved.
+ */
 const addPossibleConflicts = (possibleConflicts, code) => {
-	// It isn’t possible to refer to a local variable and create a conflict
-	// in strict mode without clearly (or nearly so) specifying the variable’s name.
-	// Unicode isn’t yet supported here. eval obviously isn’t possible to work around.
-	const JS_IDENTIFIER = /(?:[a-zA-Z_$]|\\u[0-9a-fA-F]{4}|\\u\{[0-9a-fA-F]+\})(?:[\w$]|\\u[0-9a-fA-F]{4}|\\u\{[0-9a-fA-F]+\})*/g;
+	const JS_IDENTIFIER = /(?:[\p{ID_Start}$_]|\\u[0-9a-fA-F]{4}|\\u\{[0-9a-fA-F]+\})(?:[\p{ID_Continue}$\u200c\u200d]|\\u[0-9a-fA-F]{4}|\\u\{[0-9a-fA-F]+\})*/gu;
 	let match;
 
 	while ((match = JS_IDENTIFIER.exec(code))) {
