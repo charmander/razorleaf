@@ -76,6 +76,11 @@ const tests = [
 		expected: { output: "undefined" },
 	},
 	{
+		name: "non-conflicting output variable with extended escaped references",
+		template: 'do var \\u{6f}utput;\n"#{typeof \\u{6f}utput}"',
+		expected: { output: "undefined" },
+	},
+	{
 		name: "including attributes",
 		template: "script include async",
 		include: {

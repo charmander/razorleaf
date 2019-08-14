@@ -120,16 +120,19 @@ const shortestAttributeRepresentation = attributeValue => {
 		'="' + attributeValue.replace(/"/g, "&#34;") + '"';
 };
 
+const unescapeIdentifier = source =>
+	source.replace(/\\u([0-9a-fA-F]{4})|\\u\{([0-9a-fA-F]+)\}/g, (_, hex4, hexAny) =>
+		String.fromCodePoint(parseInt(hex4 || hexAny, 16)));
+
 const addPossibleConflicts = (possibleConflicts, code) => {
 	// It isn’t possible to refer to a local variable and create a conflict
 	// in strict mode without clearly (or nearly so) specifying the variable’s name.
-	// Since we won’t be using any name but output_*, other letter and digit
-	// characters are not a concern. As for eval – that obviously isn’t possible to work around.
-	const JS_IDENTIFIER = /(?:[a-zA-Z_]|\\u[0-9a-fA-F])(?:\w|\\u[0-9a-fA-F])*/g;
+	// Unicode isn’t yet supported here. eval obviously isn’t possible to work around.
+	const JS_IDENTIFIER = /(?:[a-zA-Z_$]|\\u[0-9a-fA-F]{4}|\\u\{[0-9a-fA-F]+\})(?:[\w$]|\\u[0-9a-fA-F]{4}|\\u\{[0-9a-fA-F]+\})*/g;
 	let match;
 
 	while ((match = JS_IDENTIFIER.exec(code))) {
-		possibleConflicts.add(JSON.parse('"' + match[0] + '"'));
+		possibleConflicts.add(unescapeIdentifier(match[0]));
 	}
 };
 
