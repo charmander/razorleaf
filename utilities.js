@@ -204,9 +204,23 @@ CodeBlock.prototype.toCode = function (outputVariable, initialState) {
 	return code;
 };
 
+function fromCodePoint(codePoint) {
+	if (codePoint < 0x10000) {
+		return String.fromCharCode(codePoint);
+	}
+
+	codePoint -= 0x10000;
+
+	var leadSurrogate = (codePoint >>> 10) + 0xd800;
+	var trailSurrogate = (codePoint & 0x3ff) + 0xdc00;
+
+	return String.fromCharCode(leadSurrogate, trailSurrogate);
+}
+
 exports.CodeBlock = CodeBlock;
 exports.Markup = Markup;
 exports.escapeAttributeValue = escapeAttributeValue;
 exports.escapeContent = escapeContent;
+exports.fromCodePoint = fromCodePoint;
 exports.unwrapMarkup = unwrapMarkup;
 exports.voidTags = voidTags;

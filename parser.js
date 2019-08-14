@@ -3,6 +3,7 @@
 
 var utilities = require("./utilities");
 var CodeBlock = utilities.CodeBlock;
+var fromCodePoint = utilities.fromCodePoint;
 var push = Array.prototype.push;
 
 var HEX = /[\da-fA-F]/;
@@ -68,19 +69,6 @@ function isIdentifierCharacter(c) {
 
 function isLeadingSurrogate(code) {
 	return code >= 0xd800 && code <= 0xdbff;
-}
-
-function fromCodePoint(codePoint) {
-	if (codePoint < 0x10000) {
-		return String.fromCharCode(codePoint);
-	}
-
-	codePoint -= 0x10000;
-
-	var leadSurrogate = (codePoint >>> 10) + 0xd800;
-	var trailSurrogate = (codePoint & 0x3ff) + 0xdc00;
-
-	return String.fromCharCode(leadSurrogate, trailSurrogate);
 }
 
 function describeCharacter(c) {

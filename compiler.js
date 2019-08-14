@@ -2,6 +2,7 @@
 
 var utilities = require("./utilities");
 var CodeBlock = utilities.CodeBlock;
+var fromCodePoint = utilities.fromCodePoint;
 
 var POSSIBLE_COMMENT = /\/\/|<!--/;
 
@@ -91,16 +92,21 @@ function wrapExpression(expression) {
 	return POSSIBLE_COMMENT.test(expression) ? expression + "\n" : expression;
 }
 
+function unescapeIdentifier(source) {
+	return source.replace(/\\u([0-9a-fA-F]{4})|\\u\{([0-9a-fA-F]+)\}/g, function (_, hex4, hexAny) {
+		return fromCodePoint(parseInt(hex4 || hexAny, 16));
+	});
+}
+
 function addPossibleConflicts(possibleConflicts, code) {
 	// It isn’t possible to refer to a local variable and create a conflict
 	// in strict mode without clearly (or nearly so) specifying the variable’s name.
-	// Since we won’t be using any name but output_*, other letter and digit
-	// characters are not a concern. As for eval – that obviously isn’t possible to work around.
-	var JS_IDENTIFIER = /(?:[a-zA-Z_]|\\u[0-9a-fA-F])(?:\w|\\u[0-9a-fA-F])*/g;
+	// Unicode isn’t yet supported here. eval obviously isn’t possible to work around.
+	var JS_IDENTIFIER = /(?:[a-zA-Z_$]|\\u[0-9a-fA-F]{4}|\\u\{[0-9a-fA-F]+\})(?:[\w$]|\\u[0-9a-fA-F]{4}|\\u\{[0-9a-fA-F]+\})*/g;
 	var match;
 
 	while ((match = JS_IDENTIFIER.exec(code))) {
-		possibleConflicts[JSON.parse('"' + match[0] + '"')] = true;
+		possibleConflicts[unescapeIdentifier(match[0])] = true;
 	}
 }
 
