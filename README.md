@@ -59,7 +59,7 @@ console.log(
 Output:
 
 > # Hello, world!
-
+>
 > 9 × 12 = 108
 
 
